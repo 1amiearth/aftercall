@@ -202,5 +202,8 @@
   },
   "keepOn": {
     "message": "Keep on"
+  },
+  "err_invoke": {
+    "message": "Click the AfterCall icon in the toolbar while on this Meet tab, then press Start again"
   }
 }

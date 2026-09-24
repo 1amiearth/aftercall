@@ -158,7 +158,11 @@ const actions = {
   async start() {
     s.error = null;
     const res = await sw('start', { tabId: s.tabId });
-    if (!res?.ok) s.error = res?.error === 'not-meet' ? t('err_notmeet') : res?.error === 'busy' ? t('err_busy') : t('err_capture', res?.error ?? '');
+    if (!res?.ok) {
+      const e = res?.error ?? '';
+      s.error = e === 'not-meet' ? t('err_notmeet') : e === 'busy' ? t('err_busy')
+        : /invoked/i.test(e) ? t('err_invoke') : t('err_capture', e);
+    }
   },
   pause: () => sw('pause'),
   resume: () => sw('resume'),

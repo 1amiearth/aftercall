@@ -24,7 +24,10 @@ const queue = () => { let q = Promise.resolve(); return (fn) => (q = q.then(fn, 
 const control = queue();
 const lines = queue();
 
-chrome.runtime.onInstalled.addListener(() => chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }));
+// Same path as the ticket 01 prototype: the icon click opens the panel and grants activeTab,
+// which tabCapture.getMediaStreamId needs when Start is pressed later.
+chrome.runtime.onInstalled.addListener(() => chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }));
+chrome.action.onClicked.addListener((tab) => chrome.sidePanel.open({ tabId: tab.id }));
 
 chrome.runtime.onMessage.addListener((m, sender, reply) => {
   if (m.target !== 'sw') return;
