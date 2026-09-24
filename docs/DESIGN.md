@@ -132,7 +132,9 @@ Service worker      ตรวจแท็บ Meet, ขอ stream id, สั่�
 - เก็บ id ของโมเดลที่ผู้ใช้เลือกไว้ใน `chrome.storage.local` ถ้าไม่มีค่า ใช้โมเดลเริ่มต้น
 - ไม่แสดงรุ่นที่ลงท้าย `:batch` ใน dropdown เพราะคำตอบไม่กลับมาทันที
 - เรียกสรุปด้วย `POST https://openrouter.ai/api/v1/chat/completions` (รูปแบบเดียวกับ OpenAI Chat Completions) ใส่ `Authorization: Bearer <key>` และ `model` เป็น id ที่เลือก
-- ใส่ header `X-Title: AfterCall` ให้ชื่อแอปขึ้นในหน้าการใช้งานของ OpenRouter
+- ใส่ header `X-OpenRouter-Title: AfterCall` ให้ชื่อแอปขึ้นในหน้าการใช้งานของ OpenRouter (`X-Title` ชื่อเดิมยังใช้ได้)
+- เรียกตรงจากส่วนขยายได้ OpenRouter ตอบ CORS `access-control-allow-origin: *` ไม่ต้องมี proxy
+- กรองรายชื่อโมเดลใน dropdown ให้เหลือเฉพาะรุ่นที่ `architecture.output_modalities` เป็น `["text"]` และมี `structured_outputs` ใน `supported_parameters`
 - ตรวจ `context_length` ของโมเดลจากรายชื่อโมเดล ถ้า transcript ยาวเกิน ให้เตือนผู้ใช้ก่อนส่ง
 - ส่ง `provider: { data_collection: "deny" }` ทุกครั้ง ให้ OpenRouter ส่งต่อเฉพาะผู้ให้บริการที่ไม่เก็บข้อมูลไปเทรน
 
@@ -164,6 +166,12 @@ transcript ถูกเซฟลงเครื่องก่อนเรีย
 | 402 | เครดิต OpenRouter หมด |
 | 429 / 5xx / เน็ตหลุด | เรียกไม่สำเร็จ ลองใหม่ |
 | JSON ไม่ตรงโครง | โมเดลตอบผิดรูปแบบ ลองใหม่หรือเปลี่ยนโมเดล |
+| 503 ไม่มีผู้ให้บริการที่ไม่เก็บข้อมูล | โมเดลนี้ไม่มีผู้ให้บริการที่ไม่เก็บข้อมูล เปลี่ยนโมเดล |
+| 200 แต่มี `error` ใน body หรือ `finish_reason` เป็น `length` | คำตอบไม่ครบ ลองใหม่ |
+
+ห้ามเชื่อ HTTP status อย่างเดียว OpenRouter ตอบ 200 ที่มี `error` ใน body ได้ ต้องเช็ก `body.error` และ `choices[0].finish_reason` ทุกครั้ง error มาในรูป `{ error: { code, message, metadata? } }`
+
+Gemini รับ JSON Schema แค่บางส่วน ให้ schema สรุปตื้นและเล็ก ใช้แค่ `type`, `properties`, `required`, `items`, `enum`
 
 Side Panel มีปุ่ม **สรุปใหม่** ที่เอา transcript ของการบันทึกล่าสุดจาก `chrome.storage.local` ไปสรุปอีกครั้ง เปลี่ยนโมเดลก่อนกดได้ ส่วนขยายจำเฉพาะการบันทึกล่าสุด อยู่รอดหลังปิด Chrome การบันทึกครั้งถัดไปแทนที่ของเดิม
 
