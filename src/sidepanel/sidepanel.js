@@ -57,6 +57,7 @@ const ICON = {
   ok: '<path d="M6 10.3l2.6 2.6L14 7.6"/>',
   warn: '<path d="M10 5.8v5"/><path d="M10 14.2v.01"/>',
   err: '<path d="M6.5 10h7"/>',
+  off: '<path d="M7 10h6"/>',
 };
 const icon = (state) => `<svg class="ic ${state}" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9"/>${ICON[state]}</svg>`;
 const GEAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
@@ -75,7 +76,7 @@ function checklist() {
       : !page ? ['warn', t('meetTab'), t('meetReload')]
       : ['ok', t('meetTab'), s.meetCode],
     page?.cc ? ['ok', t('cc'), t('ccOn')] : ['warn', t('cc'), t('ccOff')],
-    st.apiKey ? ['ok', t('apiKey'), st.model || DEFAULT_MODEL] : ['warn', t('apiKey'), t('apiKeyMissing'), link(t('addKey'), 'settings')],
+    st.apiKey ? ['ok', t('apiKey'), st.model || DEFAULT_MODEL] : ['off', t('apiKey'), t('apiKeyMissing'), link(t('addKey'), 'settings')],
     st.selfName ? ['ok', t('selfName'), st.selfName] : ['warn', t('selfName'), t('selfNameMissing'), link(t('setName'), 'settings')],
     !st.mic ? ['ok', t('mic'), t('micOff'), link(t('turnOn'), 'toggle', 'mic')]
       : s.mic === 'granted' ? ['ok', t('mic'), t('micOn'), link(t('turnOff'), 'toggle', 'mic')]
@@ -119,20 +120,20 @@ function latestView() {
   const l = s.latest;
   if (!l || l.summary?.status === 'none') return '';
   const sum = l.summary;
-  const again = l.lines.length && sum.status !== 'running' ? btn(t('summarizeAgain'), 'again') : '';
+  const canSummarize = l.lines.length && sum.status !== 'running';
+  const summarize = !canSummarize ? '' : sum.status === 'done' ? btn(t('summarizeAgain'), 'summarize') : b('btn primary', esc(t('summarize')), 'summarize');
   const status = {
     running: note('info', t('summaryRunning')),
-    skipped: note('warn', t('summarySkipped')),
     empty: note('warn', t('summaryEmpty')),
     failed: note('err', t(`fail_${String(sum.kind).replace('-', '')}`)),
   }[sum.status] ?? '';
-  const hasSummary = sum.status === 'done' || sum.status === 'empty';
+  const hasSummary = sum.status === 'done';
   const file = (type, name, there = true) => `<li class="${there ? '' : 'missing'}"><span class="ftype">${type}</span>${name}</li>`;
   return `<section class="latest">
     <div class="latest-head"><h2>${t('latest')} ${esc(l.meetCode)}</h2><span class="dur">${fmt(l.durationMs)}</span></div>
     ${status}
     <ul class="files">${file('WEBM', 'recording.webm', !!l.videoDownloadId)}${file('MD', 'transcript.md')}${file('MD', 'summary.md', hasSummary)}</ul>
-    <div class="actions">${l.videoDownloadId ? btn(t('showFiles'), 'showFiles') : ''}${again}</div>
+    <div class="actions">${summarize}${l.videoDownloadId ? btn(t('showFiles'), 'showFiles') : ''}</div>
   </section>`;
 }
 
@@ -195,7 +196,12 @@ const actions = {
   pause: () => sw('pause'),
   resume: () => sw('resume'),
   stop: () => sw('stop'),
-  again: () => sw('summarize-again'),
+  async summarize() {
+    s.error = null;
+    if (!s.settings.apiKey) { s.error = t('needKey'); return; }
+    const res = await sw('summarize');
+    if (!res?.ok) s.error = { 'no-key': t('needKey'), empty: t('summaryEmpty'), busy: t('err_busy') }[res?.error] ?? t('fail_retry');
+  },
   showFiles: () => chrome.downloads.show(s.latest.videoDownloadId),
   settings() { s.view = 'settings'; },
   back() { s.view = 'main'; },

@@ -8,7 +8,8 @@ import { SETTINGS } from './lib/settings.js';
 //          { phase: 'idle'|'recording'|'paused'|'stopping', tabId, meetCode, folder, clock }
 //   latest (storage.local)   the one finished recording kept for "summarize again":
 //          { meetCode, folder, startedAt, durationMs, lines, micOk, videoDownloadId,
-//            summary: { status: 'none'|'running'|'done'|'failed'|'skipped'|'empty', kind?, message? } }
+//            summary: { status: 'none'|'ready'|'running'|'done'|'failed'|'empty', kind?, message? } }
+// Summaries only run when the user asks: many recordings never need one.
 
 const IDLE = { phase: 'idle' };
 const LIVE = ['recording', 'paused'];
@@ -37,7 +38,7 @@ chrome.runtime.onMessage.addListener((m, sender, reply) => {
     pause: () => control(pause),
     resume: () => control(resume),
     stop: () => control(stop),
-    'summarize-again': () => control(summarizeAgain),
+    summarize: () => control(summarizeLatest),
     utterance: () => lines(() => addLine(tabId, m)),
     'left-meeting': () => autoStop(tabId),
     'track-ended': async () => autoStop((await getRec()).tabId),
@@ -133,17 +134,13 @@ async function stop() {
   await lines(() => {});
   const video = await toOffscreen({ type: 'stop' });
 
-  const s = await settings();
   const latest = { ...(await getLatest()), durationMs: videoMs(r.clock, end) };
-  latest.summary = { status: !latest.lines.length ? 'empty' : !s.apiKey ? 'skipped' : 'running' };
+  latest.summary = { status: latest.lines.length ? 'ready' : 'empty' };
   latest.videoDownloadId = video?.ok
     ? await chrome.downloads.download({ url: video.url, filename: `${r.folder}/recording.webm`, conflictAction: 'uniquify' })
     : null;
   await downloadText(`${r.folder}/transcript.md`, transcriptMarkdown(latest));
   await setLatest(latest);
-
-  if (latest.summary.status === 'empty') await downloadText(`${r.folder}/summary.md`, `${header(latest)}\n${NO_TRANSCRIPT}`);
-  if (latest.summary.status === 'running') runSummary(latest, s); // not awaited: a new recording may start meanwhile
 
   if (latest.videoDownloadId) await downloadFinished(latest.videoDownloadId);
   await closeOffscreen();
@@ -151,20 +148,15 @@ async function stop() {
   return { ok: true };
 }
 
-const NO_TRANSCRIPT = `ไม่มีข้อความให้สรุป เพราะไม่ได้เปิด Live captions (CC) ใน Meet ระหว่างบันทึก
-
-No transcript to summarize: Live captions (CC) were off in Meet during the recording.
-`;
-
 // ---------- summary ----------
 
-async function summarizeAgain() {
+async function summarizeLatest() {
   const [r, latest, s] = await Promise.all([getRec(), getLatest(), settings()]);
   if (LIVE.includes(r.phase) || r.phase === 'stopping' || !latest) return { ok: false, error: 'busy' };
   if (!latest.lines.length) return { ok: false, error: 'empty' };
   if (!s.apiKey) return { ok: false, error: 'no-key' };
   await setLatest({ ...latest, summary: { status: 'running' } });
-  runSummary(latest, s);
+  runSummary(latest, s); // not awaited: a new recording may start meanwhile
   return { ok: true };
 }
 

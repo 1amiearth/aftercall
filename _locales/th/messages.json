@@ -30,7 +30,7 @@
     "message": "API key สำหรับสรุป"
   },
   "apiKeyMissing": {
-    "message": "ยังไม่มี บันทึกได้ แต่จะไม่สรุป"
+    "message": "ใช้ตอนกดสรุปเท่านั้น"
   },
   "addKey": {
     "message": "ใส่ key"
@@ -109,9 +109,6 @@
   },
   "summaryRunning": {
     "message": "กำลังสรุปด้วย AI…"
-  },
-  "summarySkipped": {
-    "message": "ไม่ได้สรุป เพราะยังไม่มี API key ใส่ key แล้วกดสรุปใหม่"
   },
   "summaryEmpty": {
     "message": "ไม่มี transcript ให้สรุป เพราะไม่ได้เปิด CC"
@@ -208,5 +205,11 @@
   },
   "noMeeting": {
     "message": "ยังไม่ได้อยู่ในห้อง Meet"
+  },
+  "summarize": {
+    "message": "สรุปด้วย AI"
+  },
+  "needKey": {
+    "message": "ใส่ OpenRouter API key ในตั้งค่าก่อนสรุป"
   }
 }

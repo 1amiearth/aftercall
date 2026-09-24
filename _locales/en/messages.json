@@ -30,7 +30,7 @@
     "message": "API key for summaries"
   },
   "apiKeyMissing": {
-    "message": "Missing. You can record, but it will not be summarized"
+    "message": "Only needed when you summarize"
   },
   "addKey": {
     "message": "Add key"
@@ -109,9 +109,6 @@
   },
   "summaryRunning": {
     "message": "Summarizing with AI…"
-  },
-  "summarySkipped": {
-    "message": "Not summarized: no API key. Add one, then summarize again"
   },
   "summaryEmpty": {
     "message": "No transcript to summarize: captions were off"
@@ -208,5 +205,11 @@
   },
   "noMeeting": {
     "message": "Not in a Meet call"
+  },
+  "summarize": {
+    "message": "Summarize with AI"
+  },
+  "needKey": {
+    "message": "Add an OpenRouter API key in Settings to summarize"
   }
 }
