@@ -23,6 +23,8 @@ Fields:
 - risks: risks, blockers and unclear points that were raised.
 - follow_up_questions: questions raised but not answered.
 
+Lines starting with ⭐ are moments the recorder marked as important. Make sure what was said around each one is covered.
+
 Do not add anything that is not in the transcript.`;
 
 const strArr = { type: 'array', items: { type: 'string' } };
@@ -113,15 +115,29 @@ export async function summarize({ key, model, transcript, fetch = globalThis.fet
   return { ok: true, summary: parseSummary(body.choices[0].message.content) };
 }
 
-/** Text-output models that support structured outputs, for the settings picker. */
+// ponytail: rough guesses (chars per token for mixed Thai/English, typical summary length); refine from real usage.
+const CHARS_PER_TOKEN = 2.5;
+const OUTPUT_TOKENS = 1500;
+
+/**
+ * Estimated USD cost to summarize, or null when the model's price is unknown.
+ * @param {string} transcript @param {{ prompt: string, completion: string } | undefined} pricing
+ */
+export function estimateCost(transcript, pricing) {
+  if (!pricing) return null;
+  const inTokens = Math.ceil((SYSTEM.length + transcript.length) / CHARS_PER_TOKEN);
+  return inTokens * Number(pricing.prompt) + OUTPUT_TOKENS * Number(pricing.completion);
+}
+
+/** Text-output models that support structured outputs, for the settings picker, with their prices. */
 export async function listModels(fetch = globalThis.fetch) {
   const { data } = await (await fetch(`${ENDPOINT}/models`)).json();
   return data
     .filter((m) => !m.id.endsWith(':batch'))
     .filter((m) => (m.architecture?.output_modalities ?? ['text']).join() === 'text')
     .filter((m) => m.supported_parameters?.includes('structured_outputs'))
-    .map((m) => m.id)
-    .sort();
+    .map((m) => ({ id: m.id, pricing: m.pricing }))
+    .sort((a, b) => a.id.localeCompare(b.id));
 }
 
 const isThai = (s) => (s.match(/[฀-๿]/g) || []).length > (s.match(/[A-Za-z]/g) || []).length * 0.5;

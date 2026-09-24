@@ -25,4 +25,7 @@ test('folder and transcript format', () => {
     lines: [{ t: 12_000, speaker: 'สมชาย', text: 'เริ่มกันเลยครับ' }],
   });
   assert.equal(md, '# Meet abc-defg-hij\n2026-09-24 14:05 · 52:10\n\n[00:12] **สมชาย:** เริ่มกันเลยครับ\n');
+  const marked = transcriptMarkdown({ meetCode: 'a', startedAt: d.getTime(), durationMs: 0,
+    lines: [{ t: 30_000, speaker: 'B', text: 'later' }, { t: 5_000, mark: true, text: 'ช่วงสำคัญ' }] });
+  assert.match(marked, /\[00:05\] ⭐ \*\*ช่วงสำคัญ\*\*\n\[00:30\] \*\*B:\*\* later/);
 });

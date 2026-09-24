@@ -2,6 +2,7 @@ import { startClock, pauseClock, resumeClock, videoMs } from './lib/clock.js';
 import { meetCodeFromUrl, folderName, transcriptMarkdown, speakerName, header } from './lib/transcript.js';
 import { summarize, summaryMarkdown, DEFAULT_MODEL } from './lib/summary.js';
 import { SETTINGS } from './lib/settings.js';
+import { speech } from './lib/health.js';
 
 // State lives in storage so a restarted service worker picks up where it left off.
 //   rec    (storage.session) the recording in progress:
@@ -15,7 +16,17 @@ const IDLE = { phase: 'idle' };
 const LIVE = ['recording', 'paused'];
 
 const getRec = async () => (await chrome.storage.session.get('rec')).rec ?? IDLE;
-const setRec = (rec) => chrome.storage.session.set({ rec });
+const setRec = async (rec) => {
+  await chrome.storage.session.set({ rec });
+  showBadge(rec.phase);
+};
+
+// REC on the toolbar icon, so you can tell it is recording with the side panel closed.
+function showBadge(phase) {
+  chrome.action.setBadgeText({ text: phase === 'recording' ? 'REC' : phase === 'paused' ? 'II' : '' });
+  chrome.action.setBadgeBackgroundColor({ color: phase === 'paused' ? '#6b7385' : '#e5484d' });
+  chrome.action.setBadgeTextColor({ color: '#ffffff' });
+}
 const getLatest = async () => (await chrome.storage.local.get('latest')).latest;
 const setLatest = (latest) => chrome.storage.local.set({ latest });
 const settings = async () => ({ ...SETTINGS, ...(await chrome.storage.local.get(Object.keys(SETTINGS))) });
@@ -30,6 +41,18 @@ const lines = queue();
 chrome.runtime.onInstalled.addListener(() => chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }));
 chrome.action.onClicked.addListener((tab) => chrome.sidePanel.open({ tabId: tab.id }));
 
+// Keyboard shortcuts also count as invoking the extension, so starting from one can capture the tab.
+chrome.commands.onCommand.addListener(async (command, tab) => {
+  if (command === 'toggle-recording') {
+    chrome.sidePanel.open({ tabId: tab.id }).catch(() => {}); // open first, while the key press still counts as a gesture
+    const r = await getRec();
+    if (LIVE.includes(r.phase)) return control(stop);
+    const res = await control(() => start(tab.id));
+    await chrome.storage.session.set({ startError: res?.ok ? null : res?.error ?? 'capture' }); // shown by the side panel
+  }
+  if (command === 'mark-moment') return lines(mark);
+});
+
 chrome.runtime.onMessage.addListener((m, sender, reply) => {
   if (m.target !== 'sw') return;
   const tabId = sender.tab?.id;
@@ -40,6 +63,7 @@ chrome.runtime.onMessage.addListener((m, sender, reply) => {
     stop: () => control(stop),
     summarize: () => control(summarizeLatest),
     'delete-latest': () => control(deleteLatest),
+    mark: () => lines(mark),
     utterance: () => lines(() => addLine(tabId, m)),
     'left-meeting': () => autoStop(tabId),
     'track-ended': async () => autoStop((await getRec()).tabId),
@@ -123,6 +147,18 @@ async function addLine(tabId, m) {
   await setLatest(latest);
 }
 
+/** A ⭐ line in the transcript at the current video time; the summary prompt gives these extra weight. */
+async function mark() {
+  const r = await getRec();
+  if (r.phase !== 'recording') return { ok: false };
+  const latest = await getLatest();
+  if (latest?.folder !== r.folder) return { ok: false };
+  const t = videoMs(r.clock, Date.now());
+  latest.lines.push({ t, mark: true, speaker: '', text: chrome.i18n.getMessage('markLine') });
+  await setLatest(latest);
+  return { ok: true, t };
+}
+
 // ---------- stop ----------
 
 async function stop() {
@@ -136,7 +172,7 @@ async function stop() {
   const video = await toOffscreen({ type: 'stop' });
 
   const latest = { ...(await getLatest()), durationMs: videoMs(r.clock, end) };
-  latest.summary = { status: latest.lines.length ? 'ready' : 'empty' };
+  latest.summary = { status: speech(latest.lines).length ? 'ready' : 'empty' };
   latest.videoDownloadId = video?.ok
     ? await chrome.downloads.download({ url: video.url, filename: `${r.folder}/recording.webm`, conflictAction: 'uniquify' })
     : null;
@@ -154,7 +190,7 @@ async function stop() {
 async function summarizeLatest() {
   const [r, latest, s] = await Promise.all([getRec(), getLatest(), settings()]);
   if (LIVE.includes(r.phase) || r.phase === 'stopping' || !latest) return { ok: false, error: 'busy' };
-  if (!latest.lines.length) return { ok: false, error: 'empty' };
+  if (!speech(latest.lines).length) return { ok: false, error: 'empty' };
   if (!s.apiKey) return { ok: false, error: 'no-key' };
   await setLatest({ ...latest, summary: { status: 'running' } });
   runSummary(latest, s); // not awaited: a new recording may start meanwhile

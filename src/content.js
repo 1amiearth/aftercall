@@ -101,7 +101,15 @@
     if (m.type === 'rec:pause') { tracker?.flush(); paused = true; }
     if (m.type === 'rec:resume') paused = false;
     if (m.type === 'rec:stop') stopCapture(); // flushes the last lines before we reply
-    if (m.type === 'status') return reply({ cc: !!MEET.captionRegion() || !!MEET.captionsOnButton(), inCall: !!MEET.leaveButton() });
+    if (m.type === 'status') {
+      const r = MEET.captionRegion();
+      return reply({
+        cc: !!r || !!MEET.captionsOnButton(),
+        inCall: !!MEET.leaveButton(),
+        seen: !!r?.innerText.trim(), // captions on screen…
+        parsed: r ? readBlocks(r).length : 0, // …and how many bubbles we could read
+      });
+    }
     reply({ ok: true });
   });
 

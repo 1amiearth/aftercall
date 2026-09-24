@@ -1,7 +1,8 @@
 import { SETTINGS } from '../lib/settings.js';
-import { meetCodeFromUrl } from '../lib/transcript.js';
+import { meetCodeFromUrl, transcriptMarkdown } from '../lib/transcript.js';
 import { videoMs, fmt } from '../lib/clock.js';
-import { listModels, DEFAULT_MODEL } from '../lib/summary.js';
+import { listModels, estimateCost, DEFAULT_MODEL } from '../lib/summary.js';
+import { captionHealth, speech } from '../lib/health.js';
 
 // Layout: pre-flight checklist (ticket 05, variant B). See docs/DESIGN.md "หน้าตา Side Panel".
 
@@ -20,6 +21,10 @@ const s = {
   error: null,
   askChatOff: false, // turning the chat notice off needs a second click on a warning
   askDelete: false, // so does deleting a recording
+  unreadablePolls: 0,
+  shortcuts: {}, // command name -> key, e.g. { 'toggle-recording': '⌥⇧R' }
+  flash: null, // short confirmation, e.g. after a mark
+  models: null, // [{ id, pricing }] from OpenRouter, for the cost estimate
 };
 
 // ---------- data ----------
@@ -34,13 +39,31 @@ async function loadTab() {
 async function pollPage() {
   const before = JSON.stringify(s.page);
   s.page = s.meetCode ? await chrome.tabs.sendMessage(s.tabId, { type: 'status' }).catch(() => null) : null;
+  s.unreadablePolls = s.page?.seen && !s.page.parsed ? s.unreadablePolls + 1 : 0;
   return JSON.stringify(s.page) !== before;
 }
 
 async function loadStorage() {
   s.settings = { ...SETTINGS, ...(await chrome.storage.local.get(Object.keys(SETTINGS))) };
   s.latest = (await chrome.storage.local.get('latest')).latest ?? null;
-  s.rec = (await chrome.storage.session.get('rec')).rec ?? { phase: 'idle' };
+  const session = await chrome.storage.session.get(['rec', 'startError']);
+  s.rec = session.rec ?? { phase: 'idle' };
+  if (session.startError) s.error = startErrorText(session.startError);
+}
+
+const startErrorText = (e) => (e === 'not-meet' ? t('err_notmeet') : e === 'busy' ? t('err_busy')
+  : /invoked/i.test(e) ? t('err_invoke') : t('err_capture', e));
+
+async function loadModels() {
+  s.models = await listModels().catch(() => []);
+  if (s.view === 'main') render();
+}
+
+function costLabel() {
+  const pricing = s.models?.find((m) => m.id === (s.settings.model || DEFAULT_MODEL))?.pricing;
+  const usd = estimateCost(transcriptMarkdown(s.latest), pricing);
+  if (usd == null) return '';
+  return usd === 0 ? t('free') : usd < 0.01 ? '< $0.01' : `~$${usd.toFixed(2)}`;
 }
 
 const saveSetting = (key, value) => chrome.storage.local.set({ [key]: value });
@@ -94,25 +117,30 @@ function startButton() {
   const busyElsewhere = live() && !recordingHere();
   const blocked = !s.meetCode || busyElsewhere;
   return `${b('btn primary big', `<span class="rec-dot"></span>${esc(t('start'))}`, 'start', '', blocked)}
-    ${blocked ? `<p class="hint">${esc(busyElsewhere ? t('err_busy') : t('meetTabNone'))}</p>` : ''}`;
+    ${blocked ? `<p class="hint">${esc(busyElsewhere ? t('err_busy') : t('meetTabNone'))}</p>`
+      : s.shortcuts['toggle-recording'] ? `<p class="hint">${esc(t('shortcutStart', s.shortcuts['toggle-recording']))}</p>` : ''}`;
 }
 
 function recordingView() {
   const paused = s.rec.phase === 'paused';
+  const marks = s.latest?.lines?.filter((l) => l.mark).length ?? 0;
   const lines = s.latest?.lines?.slice(-3) ?? [];
   const warns = [
-    s.page && !s.page.cc ? note('warn', t('ccOffWarn')) : '',
+    s.page ? { off: note('warn', t('ccOffWarn')), unreadable: note('err', t('capUnreadable')), quiet: note('warn', t('capQuiet')), ok: '' }[
+      captionHealth({ cc: s.page.cc, unreadablePolls: s.unreadablePolls, quietMs: videoMs(s.rec.clock, Date.now()) - (speech(s.latest?.lines ?? []).at(-1)?.t ?? 0) })] : '',
     s.settings.mic && s.latest?.micOk === false ? note('warn', t('micFailedWarn')) : '',
   ].join('');
   return `<section class="onair ${paused ? 'paused' : ''}" aria-live="polite">
       <div class="onair-state"><span class="pulse"></span>${t(paused ? 'paused' : 'recording')}</div>
       <div class="timer" id="timer">${fmt(videoMs(s.rec.clock, Date.now()))}</div>
       <div class="controls">${paused ? btn(t('resume'), 'resume') : btn(t('pause'), 'pause')}${b('btn primary', esc(t('stop')), 'stop')}</div>
+      ${paused ? '' : `<button class="btn mark" data-a="mark">⭐ ${esc(t('markMoment'))}${marks ? ` (${marks})` : ''}</button>`}
+      ${s.flash ? `<p class="hint" role="status">${esc(s.flash)}</p>` : s.shortcuts['mark-moment'] && !paused ? `<p class="hint">${esc(t('shortcutMark', s.shortcuts['mark-moment']))}</p>` : ''}
     </section>
     ${warns}
     <section class="captions"><h2>${t('lastCaptions')}</h2>
       ${lines.length
-        ? lines.map((l) => `<div class="line"><time>${fmt(l.t)}</time><div><b>${esc(l.speaker)}</b> ${esc(l.text)}</div></div>`).join('')
+        ? lines.map((l) => `<div class="line"><time>${fmt(l.t)}</time><div>${l.mark ? `⭐ <b>${esc(l.text)}</b>` : `<b>${esc(l.speaker)}</b> ${esc(l.text)}`}</div></div>`).join('')
         : `<div class="empty">${t('noCaptions')}</div>`}
     </section>`;
 }
@@ -121,8 +149,11 @@ function latestView() {
   const l = s.latest;
   if (!l || l.summary?.status === 'none') return '';
   const sum = l.summary;
-  const canSummarize = l.lines.length && sum.status !== 'running';
-  const summarize = !canSummarize ? '' : sum.status === 'done' ? btn(t('summarizeAgain'), 'summarize') : b('btn primary', esc(t('summarize')), 'summarize');
+  const canSummarize = speech(l.lines).length && sum.status !== 'running';
+  if (canSummarize && !s.models) loadModels();
+  const cost = canSummarize ? costLabel() : '';
+  const label = (text) => esc(cost ? `${text} (${cost})` : text);
+  const summarize = !canSummarize ? '' : sum.status === 'done' ? b('btn', label(t('summarizeAgain')), 'summarize') : b('btn primary', label(t('summarize')), 'summarize');
   const status = {
     running: note('info', t('summaryRunning')),
     empty: note('warn', t('summaryEmpty')),
@@ -183,7 +214,7 @@ let models;
 async function fillModels() {
   models ??= listModels().catch(() => []);
   const list = document.getElementById('models');
-  (await models).forEach((id) => list?.append(Object.assign(document.createElement('option'), { value: id })));
+  (await models).forEach(({ id }) => list?.append(Object.assign(document.createElement('option'), { value: id })));
 }
 
 // ---------- actions ----------
@@ -191,12 +222,15 @@ async function fillModels() {
 const actions = {
   async start() {
     s.error = null;
+    await chrome.storage.session.set({ startError: null });
     const res = await sw('start', { tabId: s.tabId });
-    if (!res?.ok) {
-      const e = res?.error ?? '';
-      s.error = e === 'not-meet' ? t('err_notmeet') : e === 'busy' ? t('err_busy')
-        : /invoked/i.test(e) ? t('err_invoke') : t('err_capture', e);
-    }
+    if (!res?.ok) s.error = startErrorText(res?.error ?? '');
+  },
+  async mark() {
+    const res = await sw('mark');
+    if (!res?.ok) return;
+    s.flash = t('marked', fmt(res.t));
+    setTimeout(() => { s.flash = null; if (s.view === 'main') render(); }, 2500);
   },
   pause: () => sw('pause'),
   resume: () => sw('resume'),
@@ -258,7 +292,9 @@ setInterval(() => {
   const el = document.getElementById('timer');
   if (el && s.rec.clock) el.textContent = fmt(videoMs(s.rec.clock, Date.now()));
 }, 1000);
-setInterval(async () => { if ((await pollPage()) && s.view === 'main') render(); }, 2000);
+setInterval(async () => { if (((await pollPage()) || live()) && s.view === 'main') render(); }, 2000); // live: caption health depends on time
+
+for (const c of await chrome.commands.getAll()) s.shortcuts[c.name] = c.shortcut;
 
 const perm = await navigator.permissions.query({ name: 'microphone' });
 s.mic = perm.state;

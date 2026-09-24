@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { classify, parseSummary, summarize, summaryMarkdown, requestBody, listModels } from '../src/lib/summary.js';
+import { classify, parseSummary, summarize, summaryMarkdown, requestBody, listModels, estimateCost } from '../src/lib/summary.js';
 
 const good = { brief: 'ประชุมวางแผน sprint', topics: ['login'], decisions: [], action_items: [{ task: 'รวม API', owner: 'ปิยะ', deadline: 'ไม่ระบุ', at: '00:52' }], risks: [], follow_up_questions: ['งบ cloud?'] };
 const ok = (content, finish = 'stop') => ({ choices: [{ finish_reason: finish, message: { content } }] });
@@ -46,10 +46,20 @@ test('summary markdown follows the summary language and escapes tables', () => {
 
 test('model list keeps text models with structured outputs, drops :batch', async () => {
   const data = [
-    { id: 'google/gemini-3.8-flash', architecture: { output_modalities: ['text'] }, supported_parameters: ['structured_outputs'] },
+    { id: 'google/gemini-3.8-flash', architecture: { output_modalities: ['text'] }, supported_parameters: ['structured_outputs'], pricing: { prompt: '0.00000075', completion: '0.00000375' } },
     { id: 'google/gemini-3.8-flash:batch', architecture: { output_modalities: ['text'] }, supported_parameters: ['structured_outputs'] },
     { id: 'google/gemini-3.1-flash-image', architecture: { output_modalities: ['image', 'text'] }, supported_parameters: ['structured_outputs'] },
     { id: 'x/no-schema', architecture: { output_modalities: ['text'] }, supported_parameters: [] },
   ];
-  assert.deepEqual(await listModels(async () => ({ json: async () => ({ data }) })), ['google/gemini-3.8-flash']);
+  assert.deepEqual(await listModels(async () => ({ json: async () => ({ data }) })), [{ id: 'google/gemini-3.8-flash', pricing: data[0].pricing }]);
+});
+
+test('cost estimate scales with transcript and is null without a price', () => {
+  const pricing = { prompt: '0.00000075', completion: '0.00000375' };
+  const hour = 'x'.repeat(75_000); // ~30k tokens, a one-hour Thai meeting
+  const usd = estimateCost(hour, pricing);
+  assert.ok(usd > 0.02 && usd < 0.04, `got ${usd}`);
+  assert.ok(estimateCost('', pricing) < usd);
+  assert.equal(estimateCost(hour, undefined), null);
+  assert.equal(estimateCost(hour, { prompt: '0', completion: '0' }), 0);
 });

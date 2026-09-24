@@ -223,5 +223,35 @@
   },
   "cancel": {
     "message": "ยกเลิก"
+  },
+  "cmdToggle": {
+    "message": "เริ่มหรือหยุดบันทึก"
+  },
+  "cmdMark": {
+    "message": "ปักหมุดช่วงนี้ว่าสำคัญ"
+  },
+  "markLine": {
+    "message": "ปักหมุดว่าสำคัญ"
+  },
+  "markMoment": {
+    "message": "ปักหมุดช่วงนี้"
+  },
+  "marked": {
+    "message": "ปักหมุดที่ $1 แล้ว"
+  },
+  "shortcutStart": {
+    "message": "หรือกด $1"
+  },
+  "shortcutMark": {
+    "message": "กด $1 เพื่อปักหมุดโดยไม่ต้องเปิดแผงนี้"
+  },
+  "capUnreadable": {
+    "message": "caption ขึ้นในหน้า Meet แต่ AfterCall อ่านไม่ออก transcript จึงว่าง วิดีโอยังบันทึกอยู่ ลองรีโหลดแท็บ Meet หรือแจ้งใน GitHub"
+  },
+  "capQuiet": {
+    "message": "ไม่มีข้อความจาก caption มา 2 นาทีแล้ว ถ้ามีคนพูดอยู่ ให้กด c สองครั้งใน Meet เพื่อเปิด CC ใหม่"
+  },
+  "free": {
+    "message": "ฟรี"
   }
 }

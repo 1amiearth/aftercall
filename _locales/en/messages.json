@@ -223,5 +223,35 @@
   },
   "cancel": {
     "message": "Cancel"
+  },
+  "cmdToggle": {
+    "message": "Start or stop recording"
+  },
+  "cmdMark": {
+    "message": "Mark this moment as important"
+  },
+  "markLine": {
+    "message": "Marked as important"
+  },
+  "markMoment": {
+    "message": "Mark this moment"
+  },
+  "marked": {
+    "message": "Marked at $1"
+  },
+  "shortcutStart": {
+    "message": "Or press $1"
+  },
+  "shortcutMark": {
+    "message": "Press $1 to mark without opening this panel"
+  },
+  "capUnreadable": {
+    "message": "Captions are on screen but AfterCall cannot read them, so the transcript is empty. The video is still recording. Reload the Meet tab, or report it on GitHub."
+  },
+  "capQuiet": {
+    "message": "No captions for 2 minutes. If people are talking, press c twice in Meet to restart captions."
+  },
+  "free": {
+    "message": "free"
   }
 }
