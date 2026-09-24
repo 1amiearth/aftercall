@@ -1,6 +1,6 @@
 import { startClock, pauseClock, resumeClock, videoMs } from './lib/clock.js';
 import { meetCodeFromUrl, folderName, transcriptMarkdown, speakerName, header } from './lib/transcript.js';
-import { summarize, summaryMarkdown, DEFAULT_MODEL } from './lib/summary.js';
+import { summarize, summaryMarkdown, PROVIDERS } from './lib/summary.js';
 import { SETTINGS } from './lib/settings.js';
 import { speech } from './lib/health.js';
 
@@ -45,7 +45,10 @@ control(async () => {
 
 // Same path as the ticket 01 prototype: the icon click opens the panel and grants activeTab,
 // which tabCapture.getMediaStreamId needs when Start is pressed later.
-chrome.runtime.onInstalled.addListener(() => chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }));
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
+  chrome.storage.local.remove(['apiKey', 'model']); // OpenRouter settings from 0.1.0; the key sat unencrypted
+});
 chrome.action.onClicked.addListener((tab) => chrome.sidePanel.open({ tabId: tab.id }));
 
 // Keyboard shortcuts also count as invoking the extension, so starting from one can capture the tab.
@@ -198,18 +201,17 @@ async function summarizeLatest() {
   const [r, latest, s] = await Promise.all([getRec(), getLatest(), settings()]);
   if (LIVE.includes(r.phase) || r.phase === 'stopping' || !latest) return { ok: false, error: 'busy' };
   if (!speech(latest.lines).length) return { ok: false, error: 'empty' };
-  if (!s.apiKey) return { ok: false, error: 'no-key' };
   await setLatest({ ...latest, summary: { status: 'running' } });
   runSummary(latest, s); // not awaited: a new recording may start meanwhile
   return { ok: true };
 }
 
 async function runSummary(latest, s) {
-  // ponytail: pings an extension API so Chrome does not stop the worker during a slow request; offscreen fetch if this proves flaky.
+  // ponytail: pings an extension API so Chrome does not stop the worker during a slow CLI run; connectNative port if this proves flaky.
   const keepAlive = setInterval(() => chrome.runtime.getPlatformInfo(), 20_000);
-  const model = s.model || DEFAULT_MODEL;
+  const model = [PROVIDERS[s.provider], s.aiModel, s.aiEffort].filter(Boolean).join(' ');
   try {
-    const res = await summarize({ key: s.apiKey, model, transcript: transcriptMarkdown(latest) });
+    const res = await summarize({ provider: s.provider, model: s.aiModel, effort: s.aiEffort, transcript: transcriptMarkdown(latest) });
     const summaryDownloadId = res.ok ? await downloadText(`${latest.folder}/summary.md`, `${header(latest)}\n${summaryMarkdown(res.summary)}`) : undefined;
     await updateSummary(latest.folder, res.ok ? { status: 'done', model } : { status: 'failed', kind: res.kind, message: res.message }, summaryDownloadId);
   } catch (e) {

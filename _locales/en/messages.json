@@ -26,15 +26,6 @@
   "ccOff": {
     "message": "Off. Press c in Meet, or there will be no transcript"
   },
-  "apiKey": {
-    "message": "API key for summaries"
-  },
-  "apiKeyMissing": {
-    "message": "Only needed when you summarize"
-  },
-  "addKey": {
-    "message": "Add key"
-  },
   "selfName": {
     "message": "Your name"
   },
@@ -114,22 +105,13 @@
     "message": "No transcript to summarize: captions were off"
   },
   "fail_auth": {
-    "message": "Summary failed: the API key is not valid"
-  },
-  "fail_credits": {
-    "message": "Summary failed: OpenRouter credits ran out"
-  },
-  "fail_noprovider": {
-    "message": "Summary failed: no provider for this model keeps your data private. Pick another model"
+    "message": "Summary failed: $1 is not logged in"
   },
   "fail_retry": {
-    "message": "Summary failed: the request did not go through. Try again"
-  },
-  "fail_truncated": {
-    "message": "Summary failed: the answer was cut off. Try again"
+    "message": "Summary failed: the AI call did not go through. Try again"
   },
   "fail_format": {
-    "message": "Summary failed: the model answered in the wrong format. Try again or pick another model"
+    "message": "Summary failed: the model answered in the wrong format. Try again"
   },
   "summarizeAgain": {
     "message": "Summarize again"
@@ -146,14 +128,8 @@
   "back": {
     "message": "Back"
   },
-  "keyLabel": {
-    "message": "OpenRouter API key"
-  },
-  "keyNote": {
-    "message": "Stored on this device, not encrypted. Get a key at openrouter.ai"
-  },
   "modelLabel": {
-    "message": "Summary model"
+    "message": "Model"
   },
   "nameLabel": {
     "message": "Your name in the transcript"
@@ -209,9 +185,6 @@
   "summarize": {
     "message": "Summarize with AI"
   },
-  "needKey": {
-    "message": "Add an OpenRouter API key in Settings to summarize"
-  },
   "deleteRecording": {
     "message": "Delete"
   },
@@ -251,7 +224,88 @@
   "capQuiet": {
     "message": "No captions for 2 minutes. If people are talking, press c twice in Meet to restart captions."
   },
-  "free": {
-    "message": "free"
+  "ai": {
+    "message": "AI for summaries"
+  },
+  "aiChecking": {
+    "message": "Checking the connection…"
+  },
+  "aiNoHost": {
+    "message": "Not connected. Only needed when you summarize"
+  },
+  "aiNoCli": {
+    "message": "Connected, but $1 is not installed on this computer"
+  },
+  "aiConnected": {
+    "message": "$1 connected ($2)"
+  },
+  "connect": {
+    "message": "Connect AI"
+  },
+  "fail_nohost": {
+    "message": "Summary failed: AI is not connected on this computer. See Settings"
+  },
+  "fail_nocli": {
+    "message": "Summary failed: $1 is not installed on this computer"
+  },
+  "fail_limit": {
+    "message": "Summary failed: your $1 usage limit is reached. Try again later"
+  },
+  "providerLabel": {
+    "message": "AI for summaries"
+  },
+  "providerNote": {
+    "message": "Uses the subscription you are logged in to on this computer. No API key needed"
+  },
+  "effortLabel": {
+    "message": "Effort"
+  },
+  "effortHint": {
+    "message": "How hard the model thinks. Higher is more thorough but slower and uses more quota"
+  },
+  "modelDefault": {
+    "message": "CLI default"
+  },
+  "modelHint": {
+    "message": "Models from $1 on this computer. Bigger models summarize better but use more quota"
+  },
+  "connectTitle": {
+    "message": "Connect AI on this computer"
+  },
+  "howToUse": {
+    "message": "How to use"
+  },
+  "step1": {
+    "message": "Install $1 and log in, in a terminal"
+  },
+  "step2": {
+    "message": "In a terminal, go to the aftercall folder and run"
+  },
+  "step3": {
+    "message": "Press \"Test connection\" below"
+  },
+  "use1": {
+    "message": "In a Meet call, turn on CC and press Start"
+  },
+  "use2": {
+    "message": "Press Stop when the meeting ends. The video and transcript are saved"
+  },
+  "use3": {
+    "message": "Press \"Summarize with AI\" on the latest recording. $1 writes summary.md and uses your account quota"
+  },
+  "testConnection": {
+    "message": "Test connection"
+  },
+  "guide": {
+    "message": "Full guide"
+  },
+  "copy": {
+    "message": "Copy"
+  },
+  "copied": {
+    "message": "Copied"
+  },
+  "fail_model": {
+    "message": "Summary failed: $1 cannot use this model. Check the model name in Settings"
   }
 }
