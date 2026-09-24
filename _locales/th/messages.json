@@ -1,0 +1,206 @@
+{
+  "extName": {
+    "message": "AfterCall"
+  },
+  "extDescription": {
+    "message": "บันทึก Google Meet เก็บ caption เป็น transcript แล้วสรุปด้วย AI"
+  },
+  "checklist": {
+    "message": "ก่อนเริ่ม"
+  },
+  "meetTab": {
+    "message": "แท็บ Google Meet"
+  },
+  "meetTabNone": {
+    "message": "เปิดห้อง Google Meet ในแท็บนี้ก่อน"
+  },
+  "meetReload": {
+    "message": "รีโหลดแท็บ Meet นี้หนึ่งครั้ง AfterCall ถึงจะอ่าน caption ได้"
+  },
+  "cc": {
+    "message": "Live captions (CC)"
+  },
+  "ccOn": {
+    "message": "เปิดอยู่ เช็กภาษา caption ให้ตรงกับภาษาที่คุย"
+  },
+  "ccOff": {
+    "message": "ปิดอยู่ กด c ใน Meet ไม่อย่างนั้นจะไม่มี transcript"
+  },
+  "apiKey": {
+    "message": "API key สำหรับสรุป"
+  },
+  "apiKeyMissing": {
+    "message": "ยังไม่มี บันทึกได้ แต่จะไม่สรุป"
+  },
+  "addKey": {
+    "message": "ใส่ key"
+  },
+  "selfName": {
+    "message": "ชื่อของคุณ"
+  },
+  "selfNameMissing": {
+    "message": "ยังไม่ตั้ง ใน transcript คุณจะเป็น \"You\" หรือ \"คุณ\""
+  },
+  "setName": {
+    "message": "ตั้งชื่อ"
+  },
+  "mic": {
+    "message": "ไมค์"
+  },
+  "micOn": {
+    "message": "ผสมเสียงของคุณเข้าไฟล์"
+  },
+  "micOff": {
+    "message": "ปิดอยู่ บันทึกแค่เสียงในห้อง"
+  },
+  "micAsk": {
+    "message": "ยังไม่ได้อนุญาต"
+  },
+  "allow": {
+    "message": "อนุญาต"
+  },
+  "turnOn": {
+    "message": "เปิด"
+  },
+  "turnOff": {
+    "message": "ปิด"
+  },
+  "chat": {
+    "message": "แจ้งในแชท Meet"
+  },
+  "chatOn": {
+    "message": "คนในห้องจะเห็นว่ากำลังบันทึก"
+  },
+  "chatOff": {
+    "message": "ปิดอยู่ คนในห้องจะไม่รู้ว่ากำลังบันทึก"
+  },
+  "start": {
+    "message": "เริ่มบันทึก"
+  },
+  "pause": {
+    "message": "พัก"
+  },
+  "resume": {
+    "message": "บันทึกต่อ"
+  },
+  "stop": {
+    "message": "หยุด"
+  },
+  "recording": {
+    "message": "กำลังบันทึก"
+  },
+  "paused": {
+    "message": "พักอยู่"
+  },
+  "stopping": {
+    "message": "กำลังเซฟไฟล์…"
+  },
+  "ccOffWarn": {
+    "message": "CC ปิดอยู่ ไม่มีข้อความถูกเก็บ กด c ใน Meet"
+  },
+  "micFailedWarn": {
+    "message": "ไมค์ยังไม่ได้อนุญาต ไฟล์นี้จะไม่มีเสียงของคุณ"
+  },
+  "lastCaptions": {
+    "message": "ข้อความล่าสุด"
+  },
+  "noCaptions": {
+    "message": "ยังไม่มี"
+  },
+  "summaryRunning": {
+    "message": "กำลังสรุปด้วย AI…"
+  },
+  "summaryDone": {
+    "message": "เสร็จแล้ว ไฟล์อยู่ใน Downloads/AfterCall"
+  },
+  "summarySkipped": {
+    "message": "ไม่ได้สรุป เพราะยังไม่มี API key ใส่ key แล้วกดสรุปใหม่"
+  },
+  "summaryEmpty": {
+    "message": "ไม่มี transcript ให้สรุป เพราะไม่ได้เปิด CC"
+  },
+  "fail_auth": {
+    "message": "สรุปไม่สำเร็จ: API key ไม่ถูกต้อง"
+  },
+  "fail_credits": {
+    "message": "สรุปไม่สำเร็จ: เครดิต OpenRouter หมด"
+  },
+  "fail_noprovider": {
+    "message": "สรุปไม่สำเร็จ: โมเดลนี้ไม่มีผู้ให้บริการที่ไม่เก็บข้อมูล เปลี่ยนโมเดล"
+  },
+  "fail_retry": {
+    "message": "สรุปไม่สำเร็จ: เรียกไม่สำเร็จ ลองใหม่"
+  },
+  "fail_truncated": {
+    "message": "สรุปไม่สำเร็จ: คำตอบไม่ครบ ลองใหม่"
+  },
+  "fail_format": {
+    "message": "สรุปไม่สำเร็จ: โมเดลตอบผิดรูปแบบ ลองใหม่หรือเปลี่ยนโมเดล"
+  },
+  "summarizeAgain": {
+    "message": "สรุปใหม่"
+  },
+  "latest": {
+    "message": "การบันทึกล่าสุด"
+  },
+  "showFiles": {
+    "message": "เปิดโฟลเดอร์"
+  },
+  "settings": {
+    "message": "ตั้งค่า"
+  },
+  "back": {
+    "message": "กลับ"
+  },
+  "keyLabel": {
+    "message": "OpenRouter API key"
+  },
+  "keyNote": {
+    "message": "เก็บในเครื่องนี้ ไม่ได้เข้ารหัส สร้าง key ได้ที่ openrouter.ai"
+  },
+  "modelLabel": {
+    "message": "โมเดลสรุป"
+  },
+  "nameLabel": {
+    "message": "ชื่อของคุณใน transcript"
+  },
+  "nameHint": {
+    "message": "ใช้แทน \"You\" หรือ \"คุณ\" ใน caption ของคุณเอง"
+  },
+  "micLabel": {
+    "message": "ผสมเสียงไมค์ของฉัน"
+  },
+  "chatLabel": {
+    "message": "แจ้งในแชท Meet ตอนเริ่มบันทึก"
+  },
+  "chatConfirm": {
+    "message": "ปิดการแจ้งในแชท? คนในห้องจะไม่รู้ว่ากำลังถูกบันทึก ซึ่งอาจขัด PDPA หรือนโยบายองค์กร"
+  },
+  "err_notmeet": {
+    "message": "แท็บนี้ไม่ใช่ห้อง Google Meet"
+  },
+  "err_busy": {
+    "message": "กำลังบันทึกอยู่แล้ว"
+  },
+  "err_capture": {
+    "message": "บันทึกแท็บนี้ไม่ได้: $1"
+  },
+  "micPageTitle": {
+    "message": "อนุญาตไมค์"
+  },
+  "micPageBody": {
+    "message": "AfterCall จะผสมเสียงของคุณเข้าไฟล์ กดปุ่มแล้วเลือก \"อนุญาต\""
+  },
+  "micPageOk": {
+    "message": "เรียบร้อย ปิดแท็บนี้ได้"
+  },
+  "micPageFailed": {
+    "message": "ยังไม่ได้อนุญาต ให้อนุญาตไมค์ของ AfterCall ในการตั้งค่า Chrome แล้วลองใหม่"
+  },
+  "confirmOff": {
+    "message": "ปิดการแจ้ง"
+  },
+  "keepOn": {
+    "message": "เปิดไว้"
+  }
+}

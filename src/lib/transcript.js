@@ -30,4 +30,4 @@ export const header = ({ meetCode, startedAt, durationMs }) => {
  * @param {{ meetCode: string, startedAt: number, durationMs: number, lines: { t: number, speaker: string, text: string }[] }} rec
  */
 export const transcriptMarkdown = (rec) =>
-  `${header(rec)}\n${rec.lines.map((l) => `[${fmt(l.t)}] **${l.speaker}:** ${l.text}`).join('\n')}\n`;
+  `${header(rec)}\n${[...rec.lines].sort((a, b) => a.t - b.t).map((l) => `[${fmt(l.t)}] **${l.speaker}:** ${l.text}`).join('\n')}\n`;

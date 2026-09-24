@@ -1,0 +1,206 @@
+{
+  "extName": {
+    "message": "AfterCall"
+  },
+  "extDescription": {
+    "message": "Record Google Meet, turn live captions into a transcript, and summarize it with AI."
+  },
+  "checklist": {
+    "message": "Before you start"
+  },
+  "meetTab": {
+    "message": "Google Meet tab"
+  },
+  "meetTabNone": {
+    "message": "Open a Google Meet call in this tab"
+  },
+  "meetReload": {
+    "message": "Reload this Meet tab once so AfterCall can read captions"
+  },
+  "cc": {
+    "message": "Live captions (CC)"
+  },
+  "ccOn": {
+    "message": "On. Check the caption language matches the meeting"
+  },
+  "ccOff": {
+    "message": "Off. Press c in Meet, or there will be no transcript"
+  },
+  "apiKey": {
+    "message": "API key for summaries"
+  },
+  "apiKeyMissing": {
+    "message": "Missing. You can record, but it will not be summarized"
+  },
+  "addKey": {
+    "message": "Add key"
+  },
+  "selfName": {
+    "message": "Your name"
+  },
+  "selfNameMissing": {
+    "message": "Not set. You will appear as \"You\" in the transcript"
+  },
+  "setName": {
+    "message": "Set name"
+  },
+  "mic": {
+    "message": "Microphone"
+  },
+  "micOn": {
+    "message": "Your voice is mixed into the recording"
+  },
+  "micOff": {
+    "message": "Off. Only the call audio is recorded"
+  },
+  "micAsk": {
+    "message": "Not allowed yet"
+  },
+  "allow": {
+    "message": "Allow"
+  },
+  "turnOn": {
+    "message": "Turn on"
+  },
+  "turnOff": {
+    "message": "Turn off"
+  },
+  "chat": {
+    "message": "Announce in Meet chat"
+  },
+  "chatOn": {
+    "message": "People in the call see that you are recording"
+  },
+  "chatOff": {
+    "message": "Off. People will not know they are being recorded"
+  },
+  "start": {
+    "message": "Start recording"
+  },
+  "pause": {
+    "message": "Pause"
+  },
+  "resume": {
+    "message": "Resume"
+  },
+  "stop": {
+    "message": "Stop"
+  },
+  "recording": {
+    "message": "Recording"
+  },
+  "paused": {
+    "message": "Paused"
+  },
+  "stopping": {
+    "message": "Saving files…"
+  },
+  "ccOffWarn": {
+    "message": "Captions are off, so nothing is being transcribed. Press c in Meet."
+  },
+  "micFailedWarn": {
+    "message": "The microphone was not allowed, so your voice is not in this recording."
+  },
+  "lastCaptions": {
+    "message": "Latest captions"
+  },
+  "noCaptions": {
+    "message": "Nothing yet"
+  },
+  "summaryRunning": {
+    "message": "Summarizing with AI…"
+  },
+  "summaryDone": {
+    "message": "Done. Files are in Downloads/AfterCall"
+  },
+  "summarySkipped": {
+    "message": "Not summarized: no API key. Add one, then summarize again"
+  },
+  "summaryEmpty": {
+    "message": "No transcript to summarize: captions were off"
+  },
+  "fail_auth": {
+    "message": "Summary failed: the API key is not valid"
+  },
+  "fail_credits": {
+    "message": "Summary failed: OpenRouter credits ran out"
+  },
+  "fail_noprovider": {
+    "message": "Summary failed: no provider for this model keeps your data private. Pick another model"
+  },
+  "fail_retry": {
+    "message": "Summary failed: the request did not go through. Try again"
+  },
+  "fail_truncated": {
+    "message": "Summary failed: the answer was cut off. Try again"
+  },
+  "fail_format": {
+    "message": "Summary failed: the model answered in the wrong format. Try again or pick another model"
+  },
+  "summarizeAgain": {
+    "message": "Summarize again"
+  },
+  "latest": {
+    "message": "Latest recording"
+  },
+  "showFiles": {
+    "message": "Show files"
+  },
+  "settings": {
+    "message": "Settings"
+  },
+  "back": {
+    "message": "Back"
+  },
+  "keyLabel": {
+    "message": "OpenRouter API key"
+  },
+  "keyNote": {
+    "message": "Stored on this device, not encrypted. Get a key at openrouter.ai"
+  },
+  "modelLabel": {
+    "message": "Summary model"
+  },
+  "nameLabel": {
+    "message": "Your name in the transcript"
+  },
+  "nameHint": {
+    "message": "Replaces \"You\" in your own captions"
+  },
+  "micLabel": {
+    "message": "Include my microphone"
+  },
+  "chatLabel": {
+    "message": "Announce in Meet chat when recording starts"
+  },
+  "chatConfirm": {
+    "message": "Turn off the announcement? People in the call will not know they are being recorded, which may break privacy law (PDPA) or company policy."
+  },
+  "err_notmeet": {
+    "message": "This tab is not a Google Meet call"
+  },
+  "err_busy": {
+    "message": "Already recording"
+  },
+  "err_capture": {
+    "message": "Could not record this tab: $1"
+  },
+  "micPageTitle": {
+    "message": "Allow microphone"
+  },
+  "micPageBody": {
+    "message": "AfterCall mixes your voice into the recording. Click the button and choose Allow."
+  },
+  "micPageOk": {
+    "message": "Done. You can close this tab."
+  },
+  "micPageFailed": {
+    "message": "Not allowed. Allow the microphone for AfterCall in Chrome settings, then try again."
+  },
+  "confirmOff": {
+    "message": "Turn off anyway"
+  },
+  "keepOn": {
+    "message": "Keep on"
+  }
+}
