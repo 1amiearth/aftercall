@@ -25,3 +25,5 @@ Content script อ่านหน้า Meet ได้ตามที่ DESIGN.
   - **ออกจากห้อง (ข้อ 6):** ตรวจได้ ปุ่ม `button[aria-label="Leave call"]` หายไป และหน้าขึ้น "You left the meeting / Rejoin" URL ไม่เปลี่ยน
   - **แชท (ข้อ 5):** เปิดแผงด้วย `button[aria-label="Chat with everyone"]` ได้ ช่องพิมพ์คือ `textarea[aria-label="Send a message"]` แต่ prototype หาปุ่มส่งผิด ไปเจอสวิตช์ host `button[role="switch"][aria-label="Let participants send messages"]` ข้อความไม่ถูกส่ง แก้ prototype ให้หาปุ่มส่งใกล้ textarea และข้าม role=switch แล้ว
   - `jsname` ดูคงที่กว่า class ใช้เป็น selector สำรองได้ แต่ aria-label เปลี่ยนตามภาษา Meet
+
+- 2026-09-24 รอบ 2: CC ภาษาไทยขึ้น และหลังแก้ให้หาปุ่มส่งใกล้ textarea ส่งแชททดสอบเข้าห้องได้จริง (ตอบข้อ 5) รอไฟล์ export ที่มี caption

@@ -1,7 +1,7 @@
 # Prototype คุณภาพสรุปภาษาไทย
 
 Type: prototype
-Status: open
+Status: claimed
 Blocked by: 02, 03
 
 ## Question
