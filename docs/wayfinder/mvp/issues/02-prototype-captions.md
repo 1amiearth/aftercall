@@ -1,7 +1,7 @@
 # Prototype การอ่าน caption และหน้า Meet
 
 Type: prototype
-Status: open
+Status: claimed
 Blocked by: -
 
 ## Question
