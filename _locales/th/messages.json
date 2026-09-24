@@ -110,9 +110,6 @@
   "summaryRunning": {
     "message": "กำลังสรุปด้วย AI…"
   },
-  "summaryDone": {
-    "message": "เสร็จแล้ว ไฟล์อยู่ใน Downloads/AfterCall"
-  },
   "summarySkipped": {
     "message": "ไม่ได้สรุป เพราะยังไม่มี API key ใส่ key แล้วกดสรุปใหม่"
   },

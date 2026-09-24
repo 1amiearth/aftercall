@@ -110,9 +110,6 @@
   "summaryRunning": {
     "message": "Summarizing with AI…"
   },
-  "summaryDone": {
-    "message": "Done. Files are in Downloads/AfterCall"
-  },
   "summarySkipped": {
     "message": "Not summarized: no API key. Add one, then summarize again"
   },
