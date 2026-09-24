@@ -38,11 +38,11 @@ Spec ของ MVP (`docs/DESIGN.md`) ไม่มีเรื่องไหน
 
 <!-- หนึ่งบรรทัดต่อ ticket ที่ resolved -->
 
+- [Prototype การอัดแท็บ Meet](issues/01-prototype-recording.md) — แบบใน DESIGN.md ใช้ได้ทั้งหมด เริ่มจาก Side Panel ได้, 1080p15, ไมค์ผสมได้, 1.1 GB/ชม. ที่ 1.5 Mbps, หน่วยความจำนิ่ง ไม่ต้องใช้ OPFS
 - [Research OpenRouter: structured outputs, data policy, errors](issues/03-research-openrouter.md) — json_schema + `data_collection: "deny"` ใช้ได้กับ gemini-3.8-flash, 200 ก็มี error ได้ต้องเช็ก body, CORS เปิด
 
 ## Not yet specified
 
-- **การเก็บวิดีโอระหว่างบันทึก**: ถ้าขนาดไฟล์จริงจาก [Prototype การอัดแท็บ Meet](issues/01-prototype-recording.md) ใหญ่จนหน่วยความจำ Offscreen รับไม่ไหวในประชุม 2 ชม. อาจต้องเขียน chunk ลง OPFS ระหว่างบันทึก
 - **พรอมต์และ schema สรุปฉบับจริง**: จะชัดหลังได้ transcript จริง
 - **`data_collection: "deny"` หรือ `zdr: true`**: zdr เข้มกว่าแต่อาจเหลือผู้ให้บริการน้อยกว่า ตัดสินใจพร้อม [Prototype คุณภาพสรุปภาษาไทย](issues/04-prototype-summary-quality.md)
 

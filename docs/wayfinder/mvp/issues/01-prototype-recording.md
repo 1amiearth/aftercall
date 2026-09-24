@@ -1,7 +1,7 @@
 # Prototype การอัดแท็บ Meet
 
 Type: prototype
-Status: claimed
+Status: resolved
 Blocked by: -
 
 ## Question
@@ -24,3 +24,19 @@ Blocked by: -
 - 2026-09-24 ได้ภาพ **1920x1080 @ 15fps** ตามที่ตั้ง (ตอบข้อ 2) **ไมค์ใช้ได้** ขอสิทธิ์ผ่าน `permissions.html` แล้ว Offscreen ใช้ต่อได้ ผู้บันทึกไม่ได้ยินเสียงตัวเองจากลำโพง (ตอบข้อ 4) ยังเหลือข้อ 5 และลำดับตอน Stop
 - 2026-09-24 แชร์สไลด์ที่ `vp9,opus` 1.5 Mbps ได้ **180 MB ต่อ 10 นาที** (ราว 1.1 GB/ชม. สูงกว่าที่ประเมินไว้ 700 MB/ชม.) **สไลด์อ่านออก** ยังไม่ได้วัดหน่วยความจำ Offscreen, log ลำดับตอน Stop, และการลากแถบเวลา
 - 2026-09-24 ผู้บันทึกเลือก**คงบิตเรต 1.5 Mbps** (~1.1 GB/ชม.) เพราะยืนยันแล้วว่าสไลด์อ่านออก ไม่ทำตัวเลือกบิตเรตในหน้าตั้งค่า
+
+## Answer
+
+แบบการอัดใน DESIGN.md ใช้ได้ทั้งหมด ทดสอบในห้อง Meet จริง 2026-09-24
+
+1. กด Start ใน Side Panel แล้ว service worker เรียก `getMediaStreamId` ได้ทันที ไม่ต้องกดไอคอนส่วนขยาย ไม่ต้องใช้ทาง B หรือ C
+2. ได้ 1920x1080 @ 15fps ตาม constraint
+3. ต่อเสียงแท็บเข้า `AudioContext.destination` แล้วผู้บันทึกได้ยินเสียงห้องปกติ
+4. ขอสิทธิ์ไมค์ผ่าน `permissions.html` แล้ว Offscreen ใช้ไมค์ได้ ผสมเข้าไฟล์ ไม่ออกลำโพง
+5. `vp9,opus` 1.5 Mbps ได้ 180 MB / 10 นาที (~1.1 GB/ชม.) สไลด์อ่านออก หน่วยความจำ Offscreen นิ่ง ผู้บันทึกเลือกคง 1.5 Mbps
+
+เพิ่มเติม: ลำดับตอน Stop (blob URL จาก Offscreen, service worker ดาวน์โหลด, รอ `complete`, ปิด Offscreen) ทำงานถูก และไฟล์ลากแถบเวลาได้
+
+ผลต่อแผน: ปิดเรื่อง "การเก็บวิดีโอระหว่างบันทึก" ใน Not yet specified ไม่ต้องใช้ OPFS
+
+Prototype: branch `prototype/recording` โฟลเดอร์ `prototypes/recording/` (commit `a1c925b`) ไม่ merge
