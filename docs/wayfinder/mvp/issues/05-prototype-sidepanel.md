@@ -1,7 +1,7 @@
 # Prototype หน้าตา Side Panel
 
 Type: prototype
-Status: claimed
+Status: resolved
 Blocked by: -
 
 ## Question
@@ -21,3 +21,11 @@ Side Panel ควรหน้าตาและเปลี่ยนสถาน
 ผลลัพธ์: HTML แบบคลิกได้ ไม่ต่อกับ API จริง ลองทั้งไทยและอังกฤษ
 
 ## Comments
+
+## Answer
+
+ผู้บันทึกเลือก**แบบ B: เช็กลิสต์ก่อนเริ่ม** (2026-09-24) จาก 3 แบบ (A ปุ่มกลมใหญ่, B เช็กลิสต์, C แท็บ + แถบควบคุม)
+
+รายละเอียดที่ใช้จริงเขียนลง DESIGN.md หัวข้อ "หน้าตา Side Panel" แล้ว: เช็กลิสต์ 6 ข้อพร้อมปุ่มแก้ในบรรทัด, แถบบันทึกสีแดง + caption ล่าสุด 3 บรรทัด, สถานะสรุปและการ์ดการบันทึกล่าสุดหลังหยุด, ตั้งค่าหลังปุ่ม ⚙
+
+Prototype: branch `prototype/bundle` ไฟล์ `prototypes/sidepanel/index.html` (commit `745a68d`) ทั้ง 3 แบบ ไม่ merge

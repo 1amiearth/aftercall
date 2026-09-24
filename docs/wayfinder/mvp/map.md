@@ -39,6 +39,7 @@ Spec ของ MVP (`docs/DESIGN.md`) ไม่มีเรื่องไหน
 <!-- หนึ่งบรรทัดต่อ ticket ที่ resolved -->
 
 - [Prototype การอัดแท็บ Meet](issues/01-prototype-recording.md) — แบบใน DESIGN.md ใช้ได้ทั้งหมด เริ่มจาก Side Panel ได้, 1080p15, ไมค์ผสมได้, 1.1 GB/ชม. ที่ 1.5 Mbps, หน่วยความจำนิ่ง ไม่ต้องใช้ OPFS
+- [Prototype หน้าตา Side Panel](issues/05-prototype-sidepanel.md) — แบบ B เช็กลิสต์ก่อนเริ่ม ปุ่มแก้ในบรรทัด แถบบันทึกสีแดงระหว่างอัด
 - [Research OpenRouter: structured outputs, data policy, errors](issues/03-research-openrouter.md) — json_schema + `data_collection: "deny"` ใช้ได้กับ gemini-3.8-flash, 200 ก็มี error ได้ต้องเช็ก body, CORS เปิด
 
 ## Not yet specified
