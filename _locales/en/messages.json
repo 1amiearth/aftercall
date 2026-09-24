@@ -211,5 +211,17 @@
   },
   "needKey": {
     "message": "Add an OpenRouter API key in Settings to summarize"
+  },
+  "deleteRecording": {
+    "message": "Delete"
+  },
+  "deleteConfirm": {
+    "message": "Delete this recording's video, transcript and summary from your computer? This cannot be undone."
+  },
+  "deleteYes": {
+    "message": "Delete files"
+  },
+  "cancel": {
+    "message": "Cancel"
   }
 }

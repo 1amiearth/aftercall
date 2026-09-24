@@ -211,5 +211,17 @@
   },
   "needKey": {
     "message": "ใส่ OpenRouter API key ในตั้งค่าก่อนสรุป"
+  },
+  "deleteRecording": {
+    "message": "ลบ"
+  },
+  "deleteConfirm": {
+    "message": "ลบวิดีโอ transcript และสรุปของการบันทึกนี้ออกจากเครื่อง? กู้คืนไม่ได้"
+  },
+  "deleteYes": {
+    "message": "ลบไฟล์"
+  },
+  "cancel": {
+    "message": "ยกเลิก"
   }
 }

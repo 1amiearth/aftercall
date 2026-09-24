@@ -19,6 +19,7 @@ const s = {
   mic: 'prompt',
   error: null,
   askChatOff: false, // turning the chat notice off needs a second click on a warning
+  askDelete: false, // so does deleting a recording
 };
 
 // ---------- data ----------
@@ -133,7 +134,11 @@ function latestView() {
     <div class="latest-head"><h2>${t('latest')} ${esc(l.meetCode)}</h2><span class="dur">${fmt(l.durationMs)}</span></div>
     ${status}
     <ul class="files">${file('WEBM', 'recording.webm', !!l.videoDownloadId)}${file('MD', 'transcript.md')}${file('MD', 'summary.md', hasSummary)}</ul>
-    <div class="actions">${summarize}${l.videoDownloadId ? btn(t('showFiles'), 'showFiles') : ''}</div>
+    ${s.askDelete
+      ? `<div class="note err" role="alert"><span>${esc(t('deleteConfirm'))}</span></div>
+         <div class="actions">${b('btn danger-fill', esc(t('deleteYes')), 'deleteYes')}${btn(t('cancel'), 'deleteNo')}</div>`
+      : `<div class="actions">${summarize}${l.videoDownloadId ? btn(t('showFiles'), 'showFiles') : ''}
+         ${sum.status !== 'running' ? b('btn danger', esc(t('deleteRecording')), 'deleteAsk') : ''}</div>`}
   </section>`;
 }
 
@@ -203,6 +208,13 @@ const actions = {
     if (!res?.ok) s.error = { 'no-key': t('needKey'), empty: t('summaryEmpty'), busy: t('err_busy') }[res?.error] ?? t('fail_retry');
   },
   showFiles: () => chrome.downloads.show(s.latest.videoDownloadId),
+  deleteAsk() { s.askDelete = true; },
+  deleteNo() { s.askDelete = false; },
+  async deleteYes() {
+    s.askDelete = false;
+    const res = await sw('delete-latest');
+    if (!res?.ok) s.error = t('err_busy');
+  },
   settings() { s.view = 'settings'; },
   back() { s.view = 'main'; },
   allowMic: () => chrome.tabs.create({ url: chrome.runtime.getURL('src/permissions/permissions.html') }),

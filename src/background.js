@@ -7,7 +7,7 @@ import { SETTINGS } from './lib/settings.js';
 //   rec    (storage.session) the recording in progress:
 //          { phase: 'idle'|'recording'|'paused'|'stopping', tabId, meetCode, folder, clock }
 //   latest (storage.local)   the one finished recording kept for "summarize again":
-//          { meetCode, folder, startedAt, durationMs, lines, micOk, videoDownloadId,
+//          { meetCode, folder, startedAt, durationMs, lines, micOk, videoDownloadId, transcriptDownloadId, summaryDownloadId,
 //            summary: { status: 'none'|'ready'|'running'|'done'|'failed'|'empty', kind?, message? } }
 // Summaries only run when the user asks: many recordings never need one.
 
@@ -39,6 +39,7 @@ chrome.runtime.onMessage.addListener((m, sender, reply) => {
     resume: () => control(resume),
     stop: () => control(stop),
     summarize: () => control(summarizeLatest),
+    'delete-latest': () => control(deleteLatest),
     utterance: () => lines(() => addLine(tabId, m)),
     'left-meeting': () => autoStop(tabId),
     'track-ended': async () => autoStop((await getRec()).tabId),
@@ -139,7 +140,7 @@ async function stop() {
   latest.videoDownloadId = video?.ok
     ? await chrome.downloads.download({ url: video.url, filename: `${r.folder}/recording.webm`, conflictAction: 'uniquify' })
     : null;
-  await downloadText(`${r.folder}/transcript.md`, transcriptMarkdown(latest));
+  latest.transcriptDownloadId = await downloadText(`${r.folder}/transcript.md`, transcriptMarkdown(latest));
   await setLatest(latest);
 
   if (latest.videoDownloadId) await downloadFinished(latest.videoDownloadId);
@@ -166,8 +167,8 @@ async function runSummary(latest, s) {
   const model = s.model || DEFAULT_MODEL;
   try {
     const res = await summarize({ key: s.apiKey, model, transcript: transcriptMarkdown(latest) });
-    if (res.ok) await downloadText(`${latest.folder}/summary.md`, `${header(latest)}\n${summaryMarkdown(res.summary)}`);
-    await updateSummary(latest.folder, res.ok ? { status: 'done', model } : { status: 'failed', kind: res.kind, message: res.message });
+    const summaryDownloadId = res.ok ? await downloadText(`${latest.folder}/summary.md`, `${header(latest)}\n${summaryMarkdown(res.summary)}`) : undefined;
+    await updateSummary(latest.folder, res.ok ? { status: 'done', model } : { status: 'failed', kind: res.kind, message: res.message }, summaryDownloadId);
   } catch (e) {
     await updateSummary(latest.folder, { status: 'failed', kind: 'retry', message: String(e?.message ?? e) });
   } finally {
@@ -175,9 +176,26 @@ async function runSummary(latest, s) {
   }
 }
 
-async function updateSummary(folder, summary) {
+async function updateSummary(folder, summary, summaryDownloadId) {
   const l = await getLatest();
-  if (l?.folder === folder) await setLatest({ ...l, summary });
+  if (l?.folder !== folder) return;
+  await setLatest({ ...l, summary, ...(summaryDownloadId ? { summaryDownloadId } : {}) });
+}
+
+// ---------- delete ----------
+
+// Deletes the latest recording's files from disk and forgets it. The empty folder stays: the downloads API cannot remove folders.
+async function deleteLatest() {
+  const [r, latest] = await Promise.all([getRec(), getLatest()]);
+  if (!latest) return { ok: true };
+  if ([...LIVE, 'stopping'].includes(r.phase) || latest.summary?.status === 'running') return { ok: false, error: 'busy' };
+  for (const id of [latest.videoDownloadId, latest.transcriptDownloadId, latest.summaryDownloadId]) {
+    if (id == null) continue;
+    await chrome.downloads.removeFile(id).catch(() => {}); // already moved or deleted by the user
+    await chrome.downloads.erase({ id });
+  }
+  await chrome.storage.local.remove('latest');
+  return { ok: true };
 }
 
 // ---------- downloads & offscreen ----------
