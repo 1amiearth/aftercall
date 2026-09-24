@@ -1,7 +1,9 @@
-// Meeting summary via OpenRouter. Facts behind this file: docs/research/openrouter.md (branch research/openrouter).
+// Meeting summary through the Claude Code or Codex CLI on this computer, via the native host in native/host.js.
+// Setup guide: docs/ai-connect.md.
 
-export const DEFAULT_MODEL = 'google/gemini-3.8-flash';
-const ENDPOINT = 'https://openrouter.ai/api/v1';
+export const HOST = 'com.aftercall.host';
+export const PROVIDERS = { claude: 'Claude Code', codex: 'Codex' };
+export const DEFAULT_PROVIDER = 'claude';
 
 // ponytail: prompt not yet validated on real Meet transcripts (ticket 04).
 export const SYSTEM = `You summarize a Google Meet transcript for the person who recorded it.
@@ -50,35 +52,6 @@ export const SCHEMA = {
   },
 };
 
-/** @param {string} model @param {string} transcript */
-export const requestBody = (model, transcript) => ({
-  model,
-  temperature: 0.2,
-  messages: [
-    { role: 'system', content: SYSTEM },
-    { role: 'user', content: `Transcript:\n\n${transcript}` },
-  ],
-  response_format: { type: 'json_schema', json_schema: { name: 'meeting_summary', strict: true, schema: SCHEMA } },
-  provider: { data_collection: 'deny' },
-});
-
-/**
- * Error kinds shown to the user. Never trust HTTP status alone: a 200 can carry an error.
- * @returns {'auth' | 'credits' | 'no-provider' | 'retry' | 'truncated' | 'format' | null}
- */
-export function classify(status, body) {
-  const err = body?.error;
-  const code = err?.code ?? status;
-  if (code === 401) return 'auth';
-  if (code === 402) return 'credits';
-  if (code === 503 && /provider/i.test(err?.message ?? '')) return 'no-provider';
-  if (err || status >= 400) return 'retry';
-  const choice = body?.choices?.[0];
-  if (choice?.finish_reason === 'length') return 'truncated';
-  if (!parseSummary(choice?.message?.content)) return 'format';
-  return null;
-}
-
 /** JSON summary from model output, or null if it does not match the schema. */
 export function parseSummary(content) {
   if (typeof content !== 'string') return null;
@@ -89,55 +62,26 @@ export function parseSummary(content) {
   return ok ? j : null;
 }
 
+const sendNative = (msg) => chrome.runtime.sendNativeMessage(HOST, msg);
+
+/** { clis, models } from the native host, or { error } when Chrome cannot reach it (not installed, wrong ID, host crashed). */
+export const ping = (send = sendNative) => send({ type: 'ping' })
+  .then((r) => (r?.ok ? { clis: r.clis, models: r.models ?? {} } : { error: r?.message ?? 'bad reply' }), (e) => ({ error: String(e?.message ?? e) }));
+
 /**
- * @param {{ key: string, model: string, transcript: string, fetch?: typeof fetch }} opts
- * @returns {Promise<{ ok: true, summary: object } | { ok: false, kind: string, message: string }>}
+ * @param {{ provider: string, model?: string, effort?: string, transcript: string, send?: (msg: object) => Promise<any> }} opts
+ * @returns {Promise<{ ok: true, summary: object } | { ok: false, kind: 'nohost' | 'nocli' | 'auth' | 'limit' | 'model' | 'retry' | 'format', message: string }>}
  */
-export async function summarize({ key, model, transcript, fetch = globalThis.fetch }) {
-  let res, body;
+export async function summarize({ provider, model = '', effort = '', transcript, send = sendNative }) {
+  let res;
   try {
-    res = await fetch(`${ENDPOINT}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://github.com/1amiearth/aftercall',
-        'X-OpenRouter-Title': 'AfterCall',
-      },
-      body: JSON.stringify(requestBody(model, transcript)),
-    });
-    body = await res.json().catch(() => null);
+    res = await send({ type: 'summarize', provider, model, effort, system: SYSTEM, prompt: `Transcript:\n\n${transcript}`, schema: SCHEMA });
   } catch (e) {
-    return { ok: false, kind: 'retry', message: String(e?.message ?? e) };
+    return { ok: false, kind: 'nohost', message: String(e?.message ?? e) }; // host not installed, not allowed, or crashed
   }
-  const kind = classify(res.status, body);
-  if (kind) return { ok: false, kind, message: body?.error?.message ?? `HTTP ${res.status}` };
-  return { ok: true, summary: parseSummary(body.choices[0].message.content) };
-}
-
-// ponytail: rough guesses (chars per token for mixed Thai/English, typical summary length); refine from real usage.
-const CHARS_PER_TOKEN = 2.5;
-const OUTPUT_TOKENS = 1500;
-
-/**
- * Estimated USD cost to summarize, or null when the model's price is unknown.
- * @param {string} transcript @param {{ prompt: string, completion: string } | undefined} pricing
- */
-export function estimateCost(transcript, pricing) {
-  if (!pricing) return null;
-  const inTokens = Math.ceil((SYSTEM.length + transcript.length) / CHARS_PER_TOKEN);
-  return inTokens * Number(pricing.prompt) + OUTPUT_TOKENS * Number(pricing.completion);
-}
-
-/** Text-output models that support structured outputs, for the settings picker, with their prices. */
-export async function listModels(fetch = globalThis.fetch) {
-  const { data } = await (await fetch(`${ENDPOINT}/models`)).json();
-  return data
-    .filter((m) => !m.id.endsWith(':batch'))
-    .filter((m) => (m.architecture?.output_modalities ?? ['text']).join() === 'text')
-    .filter((m) => m.supported_parameters?.includes('structured_outputs'))
-    .map((m) => ({ id: m.id, pricing: m.pricing }))
-    .sort((a, b) => a.id.localeCompare(b.id));
+  if (!res?.ok) return { ok: false, kind: res?.kind ?? 'retry', message: res?.message ?? '' };
+  const summary = parseSummary(res.content);
+  return summary ? { ok: true, summary } : { ok: false, kind: 'format', message: String(res.content).slice(0, 200) };
 }
 
 const isThai = (s) => (s.match(/[฀-๿]/g) || []).length > (s.match(/[A-Za-z]/g) || []).length * 0.5;

@@ -1,7 +1,7 @@
 import { SETTINGS } from '../lib/settings.js';
-import { meetCodeFromUrl, transcriptMarkdown } from '../lib/transcript.js';
+import { meetCodeFromUrl } from '../lib/transcript.js';
 import { videoMs, fmt } from '../lib/clock.js';
-import { listModels, estimateCost, DEFAULT_MODEL } from '../lib/summary.js';
+import { ping, PROVIDERS } from '../lib/summary.js';
 import { captionHealth, speech } from '../lib/health.js';
 
 // Layout: pre-flight checklist (ticket 05, variant B). See docs/DESIGN.md "หน้าตา Side Panel".
@@ -24,7 +24,7 @@ const s = {
   unreadablePolls: 0,
   shortcuts: {}, // command name -> key, e.g. { 'toggle-recording': '⌥⇧R' }
   flash: null, // short confirmation, e.g. after a mark
-  models: null, // [{ id, pricing }] from OpenRouter, for the cost estimate
+  host: undefined, // { clis: { claude, codex } (version or null), models: { claude: [{ id, name }], codex: [...] } }; { error } = host not reachable, undefined = checking
 };
 
 // ---------- data ----------
@@ -54,17 +54,17 @@ async function loadStorage() {
 const startErrorText = (e) => (e === 'not-meet' ? t('err_notmeet') : e === 'busy' ? t('err_busy')
   : /invoked/i.test(e) ? t('err_invoke') : t('err_capture', e));
 
-async function loadModels() {
-  s.models = await listModels().catch(() => []);
-  if (s.view === 'main') render();
+async function checkHost() {
+  s.host = undefined;
+  render();
+  s.host = await ping();
+  render();
 }
 
-function costLabel() {
-  const pricing = s.models?.find((m) => m.id === (s.settings.model || DEFAULT_MODEL))?.pricing;
-  const usd = estimateCost(transcriptMarkdown(s.latest), pricing);
-  if (usd == null) return '';
-  return usd === 0 ? t('free') : usd < 0.01 ? '< $0.01' : `~$${usd.toFixed(2)}`;
-}
+const GUIDE = 'https://github.com/1amiearth/aftercall/blob/main/docs/ai-connect.md';
+const INSTALL = { claude: 'npm install -g @anthropic-ai/claude-code && claude', codex: 'npm install -g @openai/codex && codex login' };
+const cliVersion = () => s.host?.clis?.[s.settings.provider];
+const modelName = () => { const { provider, aiModel } = s.settings; return !aiModel ? t('modelDefault') : s.host?.models?.[provider]?.find((m) => m.id === aiModel)?.name ?? aiModel; };
 
 const saveSetting = (key, value) => chrome.storage.local.set({ [key]: value });
 const sw = (type, extra = {}) => chrome.runtime.sendMessage({ target: 'sw', type, ...extra });
@@ -100,7 +100,9 @@ function checklist() {
       : !page ? ['warn', t('meetTab'), t('meetReload')]
       : ['ok', t('meetTab'), s.meetCode],
     page?.cc ? ['ok', t('cc'), t('ccOn')] : ['warn', t('cc'), t('ccOff')],
-    st.apiKey ? ['ok', t('apiKey'), st.model || DEFAULT_MODEL] : ['off', t('apiKey'), t('apiKeyMissing'), link(t('addKey'), 'settings')],
+    s.host === undefined ? ['warn', t('ai'), t('aiChecking')]
+      : cliVersion() ? ['ok', t('ai'), [PROVIDERS[st.provider], modelName(), st.aiEffort].filter(Boolean).join(' · ')]
+      : ['off', t('ai'), t(s.host.error ? 'aiNoHost' : 'aiNoCli', PROVIDERS[st.provider]), link(t('connect'), 'settings')],
     st.selfName ? ['ok', t('selfName'), st.selfName] : ['warn', t('selfName'), t('selfNameMissing'), link(t('setName'), 'settings')],
     !st.mic ? ['ok', t('mic'), t('micOff'), link(t('turnOn'), 'toggle', 'mic')]
       : s.mic === 'granted' ? ['ok', t('mic'), t('micOn'), link(t('turnOff'), 'toggle', 'mic')]
@@ -150,14 +152,12 @@ function latestView() {
   if (!l || l.summary?.status === 'none') return '';
   const sum = l.summary;
   const canSummarize = speech(l.lines).length && sum.status !== 'running';
-  if (canSummarize && !s.models) loadModels();
-  const cost = canSummarize ? costLabel() : '';
-  const label = (text) => esc(cost ? `${text} (${cost})` : text);
-  const summarize = !canSummarize ? '' : sum.status === 'done' ? b('btn', label(t('summarizeAgain')), 'summarize') : b('btn primary', label(t('summarize')), 'summarize');
+  const summarize = !canSummarize ? '' : sum.status === 'done' ? btn(t('summarizeAgain'), 'summarize') : b('btn primary', esc(t('summarize')), 'summarize');
   const status = {
     running: note('info', t('summaryRunning')),
     empty: note('warn', t('summaryEmpty')),
-    failed: note('err', t(`fail_${String(sum.kind).replace('-', '')}`)),
+    failed: note('err', t(chrome.i18n.getMessage(`fail_${sum.kind}`) ? `fail_${sum.kind}` : 'fail_retry', PROVIDERS[s.settings.provider]), // kinds from 0.1.0 have no message now
+      ['nohost', 'nocli', 'auth', 'model'].includes(sum.kind) ? link(t('connect'), 'settings') : ''),
   }[sum.status] ?? '';
   const hasSummary = sum.status === 'done';
   const file = (type, name, there = true) => `<li class="${there ? '' : 'missing'}"><span class="ftype">${type}</span>${name}</li>`;
@@ -186,19 +186,64 @@ function settingsView() {
   const st = s.settings;
   return `<div class="top"><button class="icon-btn" data-a="back" aria-label="${esc(t('back'))}">${BACK}</button><div class="room">${t('settings')}</div></div>
   <main><section class="fields">
-    <label class="field">${t('keyLabel')}
-      <input type="password" data-setting="apiKey" value="${esc(st.apiKey)}" placeholder="sk-or-v1-…" autocomplete="off">
-      <span class="sub">${t('keyNote')}</span></label>
+    <label class="field">${t('providerLabel')}
+      <select data-setting="provider">${Object.entries(PROVIDERS).map(([id, name]) => `<option value="${id}" ${st.provider === id ? 'selected' : ''}>${name}</option>`).join('')}</select>
+      <span class="sub">${t('providerNote')}</span></label>
     <label class="field">${t('modelLabel')}
-      <input list="models" data-setting="model" value="${esc(st.model)}" placeholder="${DEFAULT_MODEL}">
-      <datalist id="models"></datalist></label>
+      <select data-setting="aiModel">${modelOptions()}</select>
+      <span class="sub">${t('modelHint', PROVIDERS[st.provider])}</span></label>
+    <label class="field">${t('effortLabel')}
+      <select data-setting="aiEffort">${effortOptions()}</select>
+      <span class="sub">${t('effortHint')}</span></label>
     <label class="field">${t('nameLabel')}
       <input data-setting="selfName" value="${esc(st.selfName)}">
       <span class="sub">${t('nameHint')}</span></label>
     <label class="switch">${t('micLabel')}<input type="checkbox" role="switch" data-setting="mic" ${st.mic ? 'checked' : ''}></label>
     <label class="switch">${t('chatLabel')}<input type="checkbox" role="switch" data-setting="chat" ${st.chat ? 'checked' : ''}></label>
   </section>
+  ${connectView()}
   ${st.chat ? '' : note('err', t('chatOff'))}</main>`;
+}
+
+// CLI default first, then what the host reports; a saved model missing from the list stays selectable.
+function modelOptions() {
+  const { provider, aiModel } = s.settings;
+  const list = [{ id: '', name: t('modelDefault') }, ...(s.host?.models?.[provider] ?? [])];
+  if (aiModel && !list.some((m) => m.id === aiModel)) list.push({ id: aiModel, name: aiModel });
+  return list.map((m) => `<option value="${esc(m.id)}" ${m.id === aiModel ? 'selected' : ''}>${esc(m.name)}</option>`).join('');
+}
+
+// Effort levels the chosen model takes; with the CLI default model, every level any of its models takes.
+function efforts() {
+  const { provider, aiModel } = s.settings;
+  const models = (s.host?.models?.[provider] ?? []).filter((m) => !aiModel || m.id === aiModel);
+  return [...new Set(models.flatMap((m) => m.efforts ?? []))];
+}
+
+function effortOptions() {
+  const { aiEffort } = s.settings;
+  const list = ['', ...efforts()];
+  if (!list.includes(aiEffort)) list.push(aiEffort);
+  return list.map((x) => `<option value="${esc(x)}" ${x === aiEffort ? 'selected' : ''}>${esc(x || t('modelDefault'))}</option>`).join('');
+}
+
+// Setup steps until the host answers with the chosen CLI, then a short how-to.
+function connectView() {
+  const name = PROVIDERS[s.settings.provider];
+  const code = (c) => `<code>${esc(c)}</code>`;
+  const install = `native/install.sh ${chrome.runtime.id}`;
+  const status = s.host === undefined ? note('info', t('aiChecking'))
+    : cliVersion() ? note('ok', t('aiConnected', name, cliVersion()))
+    : note('warn', s.host.error ? `${t('aiNoHost')} (${s.host.error})` : t('aiNoCli', name));
+  const steps = cliVersion()
+    ? [t('use1'), t('use2'), t('use3', name)]
+    : [`${esc(t('step1', name))}${code(INSTALL[s.settings.provider])}`,
+      `${esc(t('step2'))}${code(install)}${b('link', esc(t('copy')), 'copy', install)}`,
+      esc(t('step3'))];
+  return `<section class="fields connect"><h2>${t(cliVersion() ? 'howToUse' : 'connectTitle')}</h2>${status}
+    <ol class="steps">${steps.map((x) => `<li>${cliVersion() ? esc(x) : x}</li>`).join('')}</ol>
+    <div class="actions">${btn(t('testConnection'), 'testHost')}${link(t('guide'), 'guide')}</div>
+    ${s.flash ? `<p class="hint" role="status">${esc(s.flash)}</p>` : ''}</section>`;
 }
 
 const chatOffWarning = () => s.askChatOff
@@ -207,14 +252,6 @@ const chatOffWarning = () => s.askChatOff
 
 function render() {
   app.innerHTML = (s.view === 'settings' ? settingsView() : mainView()).replace('<main>', `<main>${chatOffWarning()}`);
-  if (s.view === 'settings') fillModels();
-}
-
-let models;
-async function fillModels() {
-  models ??= listModels().catch(() => []);
-  const list = document.getElementById('models');
-  (await models).forEach(({ id }) => list?.append(Object.assign(document.createElement('option'), { value: id })));
 }
 
 // ---------- actions ----------
@@ -237,9 +274,8 @@ const actions = {
   stop: () => sw('stop'),
   async summarize() {
     s.error = null;
-    if (!s.settings.apiKey) { s.error = t('needKey'); return; }
     const res = await sw('summarize');
-    if (!res?.ok) s.error = { 'no-key': t('needKey'), empty: t('summaryEmpty'), busy: t('err_busy') }[res?.error] ?? t('fail_retry');
+    if (!res?.ok) s.error = { empty: t('summaryEmpty'), busy: t('err_busy') }[res?.error] ?? t('fail_retry');
   },
   showFiles: () => chrome.downloads.show(s.latest.videoDownloadId),
   deleteAsk() { s.askDelete = true; },
@@ -249,7 +285,14 @@ const actions = {
     const res = await sw('delete-latest');
     if (!res?.ok) s.error = t('err_busy');
   },
-  settings() { s.view = 'settings'; },
+  settings() { s.view = 'settings'; checkHost(); },
+  testHost: () => checkHost(),
+  guide: () => chrome.tabs.create({ url: GUIDE }),
+  async copy(text) {
+    await navigator.clipboard.writeText(text);
+    s.flash = t('copied');
+    setTimeout(() => { s.flash = null; render(); }, 2500);
+  },
   back() { s.view = 'main'; },
   allowMic: () => chrome.tabs.create({ url: chrome.runtime.getURL('src/permissions/permissions.html') }),
   async toggle(key) {
@@ -271,9 +314,16 @@ app.addEventListener('click', async (e) => {
 app.addEventListener('change', async (e) => {
   const key = e.target.dataset.setting;
   if (!key) return;
-  let value = e.target.type === 'checkbox' ? e.target.checked : e.target.value.trim();
+  const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value.trim();
   if (key === 'chat' && !value) { e.target.checked = true; s.askChatOff = true; render(); return; }
-  if (key === 'model' && !value) value = DEFAULT_MODEL;
+  if (key === 'provider' || key === 'aiModel') { // model names do not carry over between CLIs, nor effort levels between models
+    const next = key === 'provider' ? { provider: value, aiModel: '', aiEffort: '' } : { aiModel: value };
+    Object.assign(s.settings, next);
+    if (key === 'aiModel' && s.host && !efforts().includes(s.settings.aiEffort)) s.settings.aiEffort = next.aiEffort = '';
+    await chrome.storage.local.set(next);
+    render();
+    return;
+  }
   await saveSetting(key, value);
 });
 
@@ -302,3 +352,4 @@ perm.onchange = () => { s.mic = perm.state; if (s.view === 'main') render(); };
 
 await Promise.all([loadTab(), loadStorage()]);
 render();
+checkHost();

@@ -1,6 +1,6 @@
 # AfterCall
 
-ส่วนขยาย Google Chrome สำหรับ Google Meet บันทึกแท็บประชุม เก็บ Live Captions เป็น transcript แล้วสรุปด้วย AI ผ่าน OpenRouter
+ส่วนขยาย Google Chrome สำหรับ Google Meet บันทึกแท็บประชุม เก็บ Live Captions เป็น transcript แล้วสรุปด้วย Claude Code หรือ Codex ที่ login ไว้ในเครื่อง ไม่ต้องมี API key
 
 ไม่มีบอทเข้าห้อง ไม่ต้องเป็น host และไฟล์ทั้งหมดเก็บอยู่ในเครื่องของคุณ
 
@@ -14,18 +14,17 @@
 - ผสมเสียงไมค์ของคุณเข้าไฟล์ เปิด/ปิดได้
 - เก็บ Live Captions ของ Meet เป็น transcript พร้อมชื่อคนพูดและเวลาในวิดีโอ
 - กดสรุปด้วย AI เมื่อต้องการ (ไม่สรุปเองอัตโนมัติ ไม่เปลือง token): ภาพรวม, หัวข้อ, การตัดสินใจ, action items, ความเสี่ยง, คำถามที่ต้องตามต่อ
-- เลือกโมเดล AI เองจาก OpenRouter (ค่าเริ่มต้น `google/gemini-3.8-flash`)
+- สรุปด้วย Claude Code หรือ Codex ผ่านบัญชี subscription ของคุณ เลือกโมเดลเองได้
 - แจ้งในแชท Meet ว่ากำลังบันทึก
 - ป้าย REC บนไอคอน และคีย์ลัด `⌥⇧R` เริ่ม/หยุด, `⌥⇧M` ปักหมุดช่วงสำคัญ (เปลี่ยนได้ที่ `chrome://extensions/shortcuts`)
 - เตือนระหว่างประชุมถ้า caption ไม่ถูกเก็บ
-- บอกค่าใช้จ่ายโดยประมาณก่อนกดสรุป
 - หยุดและเซฟอัตโนมัติเมื่อปิดแท็บหรือออกจากห้อง
 
 ## ความเป็นส่วนตัว
 
 - วิดีโอไม่ออกจากเครื่อง ไม่มีเซิร์ฟเวอร์ของ AfterCall
-- transcript ส่งออกเฉพาะตอนสรุป ไปที่ OpenRouter ด้วย API key ของคุณเอง และขอ `data_collection: "deny"` ทุกครั้ง
-- API key เก็บใน `chrome.storage.local` แบบไม่เข้ารหัส
+- transcript ส่งออกเฉพาะตอนสรุป ไปที่ Anthropic (Claude Code) หรือ OpenAI (Codex) ตามเงื่อนไขบัญชีของคุณ ปิดการนำไปเทรนได้ในหน้าตั้งค่าบัญชี
+- AfterCall ไม่เก็บ API key หรือ token การ login ทุกอย่างผ่าน CLI ทางการในเครื่อง
 - ก่อนบันทึก แจ้งผู้เข้าร่วมทุกครั้ง การอัดผู้อื่นโดยไม่แจ้งอาจขัด PDPA กฎหมายในประเทศของคุณ หรือนโยบายองค์กร
 
 ---
@@ -47,10 +46,9 @@ git clone https://github.com/1amiearth/aftercall.git
 
 ## ตั้งค่า
 
-1. สมัคร [OpenRouter](https://openrouter.ai) แล้วสร้าง API key
-2. เปิด Side Panel ของ AfterCall ไปที่หน้าตั้งค่า ใส่ API key
-3. เลือกโมเดล หรือใช้ค่าเริ่มต้น `google/gemini-3.8-flash` (ประชุม 1 ชม. ราว $0.03)
-4. ถ้าจะผสมเสียงไมค์ กดอนุญาตไมค์ในหน้าที่เปิดขึ้นมาครั้งแรก
+1. เชื่อม AI ตาม [คู่มือเชื่อม AI](docs/ai-connect.md): ติดตั้งและ login Claude Code หรือ Codex แล้วรัน `native/install.sh <extension-id>` หนึ่งครั้ง (หน้าตั้งค่าใน Side Panel มีคำสั่งพร้อม ID ให้คัดลอก)
+2. เลือก AI ในหน้าตั้งค่า แล้วกด **ทดสอบการเชื่อมต่อ**
+3. ถ้าจะผสมเสียงไมค์ กดอนุญาตไมค์ในหน้าที่เปิดขึ้นมาครั้งแรก
 
 ## วิธีใช้
 
@@ -59,7 +57,7 @@ git clone https://github.com/1amiearth/aftercall.git
 3. เปิด Side Panel ของ AfterCall กด **Start**
 4. Pause / Resume ได้ระหว่างประชุม
 5. กด **Stop** หรือออกจากห้อง วิดีโอกับ transcript จะเซฟให้อัตโนมัติ
-6. ถ้าต้องการสรุป กด **สรุปด้วย AI** ในการ์ดการบันทึกล่าสุด (ต้องมี API key) ไม่กดก็ไม่เสีย token
+6. ถ้าต้องการสรุป กด **สรุปด้วย AI** ในการ์ดการบันทึกล่าสุด (ต้องเชื่อม AI ก่อน) ไม่กดก็ไม่ใช้ quota
 
 ไฟล์ที่ได้
 
@@ -78,7 +76,7 @@ Downloads/AfterCall/2026-09-24_1430_abc-defg-hij/
 - ถ้าไม่เปิด CC จะไม่มี transcript และไม่มีสรุป
 - Google เปลี่ยนหน้า Meet เมื่อไร การอ่าน caption และการส่งแชทอาจพังได้ ถ้าเจอ [เปิด issue](https://github.com/1amiearth/aftercall/issues)
 - ไฟล์ WebM บางโปรแกรมเล่นลากแถบเวลาไม่ได้
-- รองรับเฉพาะ Google Chrome
+- รองรับเฉพาะ Google Chrome การสรุปด้วย AI ใช้ได้บน macOS และ Linux
 
 ---
 

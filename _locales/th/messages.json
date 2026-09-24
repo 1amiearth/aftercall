@@ -26,15 +26,6 @@
   "ccOff": {
     "message": "ปิดอยู่ กด c ใน Meet ไม่อย่างนั้นจะไม่มี transcript"
   },
-  "apiKey": {
-    "message": "API key สำหรับสรุป"
-  },
-  "apiKeyMissing": {
-    "message": "ใช้ตอนกดสรุปเท่านั้น"
-  },
-  "addKey": {
-    "message": "ใส่ key"
-  },
   "selfName": {
     "message": "ชื่อของคุณ"
   },
@@ -114,22 +105,13 @@
     "message": "ไม่มี transcript ให้สรุป เพราะไม่ได้เปิด CC"
   },
   "fail_auth": {
-    "message": "สรุปไม่สำเร็จ: API key ไม่ถูกต้อง"
-  },
-  "fail_credits": {
-    "message": "สรุปไม่สำเร็จ: เครดิต OpenRouter หมด"
-  },
-  "fail_noprovider": {
-    "message": "สรุปไม่สำเร็จ: โมเดลนี้ไม่มีผู้ให้บริการที่ไม่เก็บข้อมูล เปลี่ยนโมเดล"
+    "message": "สรุปไม่สำเร็จ: $1 ยังไม่ได้ login"
   },
   "fail_retry": {
-    "message": "สรุปไม่สำเร็จ: เรียกไม่สำเร็จ ลองใหม่"
-  },
-  "fail_truncated": {
-    "message": "สรุปไม่สำเร็จ: คำตอบไม่ครบ ลองใหม่"
+    "message": "สรุปไม่สำเร็จ: เรียก AI ไม่สำเร็จ ลองใหม่"
   },
   "fail_format": {
-    "message": "สรุปไม่สำเร็จ: โมเดลตอบผิดรูปแบบ ลองใหม่หรือเปลี่ยนโมเดล"
+    "message": "สรุปไม่สำเร็จ: โมเดลตอบผิดรูปแบบ ลองใหม่"
   },
   "summarizeAgain": {
     "message": "สรุปใหม่"
@@ -146,14 +128,8 @@
   "back": {
     "message": "กลับ"
   },
-  "keyLabel": {
-    "message": "OpenRouter API key"
-  },
-  "keyNote": {
-    "message": "เก็บในเครื่องนี้ ไม่ได้เข้ารหัส สร้าง key ได้ที่ openrouter.ai"
-  },
   "modelLabel": {
-    "message": "โมเดลสรุป"
+    "message": "โมเดล"
   },
   "nameLabel": {
     "message": "ชื่อของคุณใน transcript"
@@ -209,9 +185,6 @@
   "summarize": {
     "message": "สรุปด้วย AI"
   },
-  "needKey": {
-    "message": "ใส่ OpenRouter API key ในตั้งค่าก่อนสรุป"
-  },
   "deleteRecording": {
     "message": "ลบ"
   },
@@ -251,7 +224,88 @@
   "capQuiet": {
     "message": "ไม่มีข้อความจาก caption มา 2 นาทีแล้ว ถ้ามีคนพูดอยู่ ให้กด c สองครั้งใน Meet เพื่อเปิด CC ใหม่"
   },
-  "free": {
-    "message": "ฟรี"
+  "ai": {
+    "message": "AI สำหรับสรุป"
+  },
+  "aiChecking": {
+    "message": "กำลังเช็กการเชื่อมต่อ…"
+  },
+  "aiNoHost": {
+    "message": "ยังไม่ได้เชื่อม ใช้ตอนกดสรุปเท่านั้น"
+  },
+  "aiNoCli": {
+    "message": "เชื่อมแล้ว แต่ไม่พบ $1 ในเครื่อง"
+  },
+  "aiConnected": {
+    "message": "เชื่อม $1 แล้ว ($2)"
+  },
+  "connect": {
+    "message": "เชื่อม AI"
+  },
+  "fail_nohost": {
+    "message": "สรุปไม่สำเร็จ: ยังไม่ได้เชื่อม AI ในเครื่อง ดูวิธีในตั้งค่า"
+  },
+  "fail_nocli": {
+    "message": "สรุปไม่สำเร็จ: ไม่พบ $1 ในเครื่อง"
+  },
+  "fail_limit": {
+    "message": "สรุปไม่สำเร็จ: quota ของ $1 หมด รอสักพักแล้วลองใหม่"
+  },
+  "providerLabel": {
+    "message": "AI ที่ใช้สรุป"
+  },
+  "providerNote": {
+    "message": "ใช้บัญชี subscription ที่ login ไว้ในเครื่อง ไม่ต้องมี API key"
+  },
+  "effortLabel": {
+    "message": "Effort"
+  },
+  "effortHint": {
+    "message": "ระดับการคิดของโมเดล ยิ่งสูงยิ่งละเอียด แต่ช้าและใช้ quota มากขึ้น"
+  },
+  "modelDefault": {
+    "message": "ค่าเริ่มต้นของ CLI"
+  },
+  "modelHint": {
+    "message": "รายชื่อจาก $1 ในเครื่อง โมเดลใหญ่สรุปละเอียดกว่าแต่ใช้ quota มากกว่า"
+  },
+  "connectTitle": {
+    "message": "เชื่อม AI ในเครื่อง"
+  },
+  "howToUse": {
+    "message": "วิธีใช้"
+  },
+  "step1": {
+    "message": "ติดตั้ง $1 แล้ว login ในเทอร์มินัล"
+  },
+  "step2": {
+    "message": "ในเทอร์มินัล เข้าโฟลเดอร์ aftercall แล้วรัน"
+  },
+  "step3": {
+    "message": "กด \"ทดสอบการเชื่อมต่อ\" ด้านล่าง"
+  },
+  "use1": {
+    "message": "ในห้อง Meet เปิด CC แล้วกดเริ่มบันทึก"
+  },
+  "use2": {
+    "message": "จบประชุมกดหยุด ไฟล์วิดีโอกับ transcript จะถูกเซฟ"
+  },
+  "use3": {
+    "message": "กด \"สรุปด้วย AI\" ในการ์ดการบันทึกล่าสุด $1 จะสรุปเป็น summary.md และใช้ quota ของบัญชีคุณ"
+  },
+  "testConnection": {
+    "message": "ทดสอบการเชื่อมต่อ"
+  },
+  "guide": {
+    "message": "คู่มือฉบับเต็ม"
+  },
+  "copy": {
+    "message": "คัดลอก"
+  },
+  "copied": {
+    "message": "คัดลอกแล้ว"
+  },
+  "fail_model": {
+    "message": "สรุปไม่สำเร็จ: $1 ใช้โมเดลนี้ไม่ได้ เช็กชื่อโมเดลในตั้งค่า"
   }
 }

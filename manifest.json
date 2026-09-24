@@ -17,11 +17,11 @@
     "offscreen",
     "activeTab",
     "storage",
-    "downloads"
+    "downloads",
+    "nativeMessaging"
   ],
   "host_permissions": [
-    "https://meet.google.com/*",
-    "https://openrouter.ai/*"
+    "https://meet.google.com/*"
   ],
   "background": {
     "service_worker": "src/background.js",

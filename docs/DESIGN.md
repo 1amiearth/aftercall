@@ -5,7 +5,7 @@
 
 ใช้สำหรับ Project Manager และทีมที่อยากได้บันทึกประชุม + action items โดยไม่ต้องพึ่งบอทเข้าห้อง และไม่ต้องเป็น host ของ Google Meet
 
-วิดีโอและไฟล์สรุปอยู่บนเครื่องผู้ใช้ Transcript ส่งออกไปเฉพาะตอนขอสรุป และส่งเฉพาะข้อความไปยัง OpenRouter ด้วยโมเดลที่ผู้ใช้เลือกเอง
+วิดีโอและไฟล์สรุปอยู่บนเครื่องผู้ใช้ Transcript ส่งออกไปเฉพาะตอนขอสรุป และส่งเฉพาะข้อความไปยัง Claude Code หรือ Codex ที่ผู้ใช้ login ไว้ในเครื่อง
 
 ---
 
@@ -69,11 +69,12 @@ Service worker      ตรวจแท็บ Meet, ขอ stream id, สั่�
 
 | ส่วน | ไฟล์โดยประมาณ | หน้าที่ |
 |---|---|---|
-| Side Panel | `src/sidepanel/` | ปุ่มควบคุม, ตัวจับเวลา, สวิตช์ไมค์และแชท, ใส่ OpenRouter API key, เลือกโมเดล |
+| Side Panel | `src/sidepanel/` | ปุ่มควบคุม, ตัวจับเวลา, สวิตช์ไมค์และแชท, เลือก AI (Claude Code / Codex), โมเดล, สถานะการเชื่อมต่อ |
 | Service worker | `src/background.js` | ประสานงานอย่างเดียว ไม่ถือ media stream |
 | Offscreen | `src/offscreen/` | `getUserMedia` จาก stream id, Web Audio mix, `MediaRecorder` |
 | Content script | `src/content.js` | `MutationObserver` บน captions, พิมพ์แจ้งในช่องแชท Meet |
-| สรุป | `src/summary.js` | ประกอบพรอมต์จาก transcript แล้วเรียก OpenRouter ด้วยโมเดลที่เลือก |
+| สรุป | `src/lib/summary.js` | ประกอบพรอมต์จาก transcript แล้วส่งให้ native host |
+| Native host | `native/` | รัน CLI ของ Claude Code หรือ Codex ในเครื่อง ส่ง JSON กลับ |
 
 `manifest.json` อย่างน้อยต้องมี
 
@@ -93,8 +94,9 @@ Service worker      ตรวจแท็บ Meet, ขอ stream id, สั่�
 
 | ตั้งค่า | ค่าเริ่มต้น |
 |---|---|
-| OpenRouter API key | ว่าง (บันทึกได้ ใช้ตอนกดสรุปเท่านั้น) |
-| โมเดล | `google/gemini-3.8-flash` |
+| AI ที่ใช้สรุป | Claude Code |
+| โมเดล | ว่าง (ใช้ค่าเริ่มต้นของ CLI) |
+| Effort | ว่าง (ใช้ค่าเริ่มต้นของ CLI) ส่งเป็น `--effort` (Claude Code) หรือ `-c model_reasoning_effort` (Codex) |
 | ชื่อผู้บันทึก | ว่าง (ใช้แทน "คุณ/You" ใน transcript) |
 | ผสมไมค์ | เปิด จำค่าล่าสุด |
 | การแจ้งในแชท | เปิด ปิดได้หลังยืนยันคำเตือน |
@@ -106,7 +108,7 @@ Service worker      ตรวจแท็บ Meet, ขอ stream id, สั่�
 - **ก่อนบันทึก:** เช็กลิสต์ 6 ข้อ แต่ละข้อมีสถานะ ✅ / ⚠️ / ⛔ คำอธิบายสั้น และปุ่มแก้ในบรรทัด
   1. แท็บ Google Meet (⛔ ถ้าไม่ใช่ ปุ่มเริ่มกดไม่ได้)
   2. Live captions (⚠️ ถ้าปิด บอกให้กด `c` ใน Meet และเช็กภาษา caption)
-  3. API key (⚠️ ถ้าไม่มี + ปุ่มใส่ key บันทึกได้แต่ไม่สรุป)
+  3. AI สำหรับสรุป (⛔ ถ้ายังไม่เชื่อม + ปุ่มเชื่อม AI บันทึกได้แต่ไม่สรุป)
   4. ชื่อผู้บันทึก (⚠️ ถ้าไม่มี + ปุ่มตั้งชื่อ)
   5. ไมค์ (⚠️ ถ้ายังไม่อนุญาต + ปุ่มอนุญาต หรือปุ่มเปิด/ปิด)
   6. การแจ้งในแชท (⚠️ ถ้าปิด พร้อมคำเตือน PDPA)
@@ -135,10 +137,10 @@ Service worker      ตรวจแท็บ Meet, ขอ stream id, สั่�
 | `tabCapture` | ขอ media stream ของแท็บ Meet |
 | `offscreen` | ถือ recorder นอก service worker |
 | `activeTab` | รู้ว่าแท็บที่เปิดแผงอยู่คือ Meet |
-| `storage` | จำสวิตช์ไมค์, การแจ้งแชท, API key, โมเดลที่เลือก ในเครื่อง |
+| `storage` | จำสวิตช์ไมค์, การแจ้งแชท, AI และโมเดลที่เลือก ในเครื่อง |
 | `downloads` | เซฟ `.webm`, `.md` ลงเครื่อง |
 | host `https://meet.google.com/*` | content script อ่าน captions และส่งแชท |
-| host `https://openrouter.ai/*` | เรียก OpenRouter เพื่อสรุป และดึงรายชื่อโมเดล |
+| `nativeMessaging` | เรียก Claude Code หรือ Codex ในเครื่องผ่าน `native/host.js` เพื่อสรุป |
 
 ไมค์ไม่ใส่เป็น permission ใน manifest แต่ Offscreen ไม่มีหน้าจอ จึงเด้งขอสิทธิ์ไมค์เองไม่ได้ ครั้งแรกที่ผู้ใช้เปิดสวิตช์ไมค์ ให้เปิดหน้าส่วนขยายที่มองเห็นได้ (เช่น แท็บ `permissions.html`) เรียก `getUserMedia({ audio: true })` ให้ผู้ใช้กดอนุญาต จากนั้น Offscreen ใช้สิทธิ์เดียวกันได้เพราะอยู่ origin ของส่วนขยายเดียวกัน
 
@@ -146,21 +148,19 @@ Service worker      ตรวจแท็บ Meet, ขอ stream id, สั่�
 
 ---
 
-## การสรุปด้วย OpenRouter
+## การสรุปด้วย Claude Code หรือ Codex
 
-สรุปผ่าน [OpenRouter](https://openrouter.ai) ที่เดียว ผู้ใช้เลือกโมเดลเองในหน้าตั้งค่า ไม่ผูกกับเจ้าใดเจ้าหนึ่ง
+เปลี่ยนจาก OpenRouter เมื่อ 2026-09-24 ให้ใช้บัญชี subscription ที่ผู้ใช้มีอยู่แล้ว ไม่ต้องมี API key วิธีติดตั้งฝั่งผู้ใช้อยู่ใน [ai-connect.md](ai-connect.md)
 
-- ผู้ใช้ใส่ OpenRouter API key ของตัวเอง ค่าใช้จ่ายคิดกับบัญชีผู้ใช้
-- ดึงรายชื่อโมเดลจาก `GET https://openrouter.ai/api/v1/models` มาให้เลือกใน dropdown
-- โมเดลเริ่มต้นคือ `google/gemini-3.8-flash` ใช้ทันทีถ้าผู้ใช้ยังไม่เลือก (รับได้ 1M token, ราคา $0.75 / $3.75 ต่อ 1M token in / out, ประชุม 1 ชม. ราว $0.03)
-- เก็บ id ของโมเดลที่ผู้ใช้เลือกไว้ใน `chrome.storage.local` ถ้าไม่มีค่า ใช้โมเดลเริ่มต้น
-- ไม่แสดงรุ่นที่ลงท้าย `:batch` ใน dropdown เพราะคำตอบไม่กลับมาทันที
-- เรียกสรุปด้วย `POST https://openrouter.ai/api/v1/chat/completions` (รูปแบบเดียวกับ OpenAI Chat Completions) ใส่ `Authorization: Bearer <key>` และ `model` เป็น id ที่เลือก
-- ใส่ header `X-OpenRouter-Title: AfterCall` ให้ชื่อแอปขึ้นในหน้าการใช้งานของ OpenRouter (`X-Title` ชื่อเดิมยังใช้ได้)
-- เรียกตรงจากส่วนขยายได้ OpenRouter ตอบ CORS `access-control-allow-origin: *` ไม่ต้องมี proxy
-- กรองรายชื่อโมเดลใน dropdown ให้เหลือเฉพาะรุ่นที่ `architecture.output_modalities` เป็น `["text"]` และมี `structured_outputs` ใน `supported_parameters`
-- ตรวจ `context_length` ของโมเดลจากรายชื่อโมเดล ถ้า transcript ยาวเกิน ให้เตือนผู้ใช้ก่อนส่ง
-- ส่ง `provider: { data_collection: "deny" }` ทุกครั้ง ให้ OpenRouter ส่งต่อเฉพาะผู้ให้บริการที่ไม่เก็บข้อมูลไปเทรน
+- ส่วนขยายรันโปรแกรมในเครื่องเองไม่ได้ จึงใช้ Chrome Native Messaging: `chrome.runtime.sendNativeMessage('com.aftercall.host', …)` ไปที่ `native/host.js` (Node)
+- `native/install.sh <extension-id>` เขียน host manifest ลง `NativeMessagingHosts` ของ Chrome (macOS, Linux) คัดลอก `host.js` ไป `~/Library/Application Support/AfterCall` (macOS ไม่ให้ Chrome อ่าน `~/Documents`) และสร้าง `run.sh` ข้างกันที่ตรึง `PATH` ของเทอร์มินัลไว้ เพราะ Chrome เปิด host ด้วย `PATH` สั้นจนหา `node`, `claude`, `codex` ไม่เจอ
+- `allowed_origins` ใน host manifest มีแค่ extension ID ของผู้ใช้ ส่วนขยายอื่นเรียก host ไม่ได้
+- Claude Code: `claude -p --output-format json --json-schema … --system-prompt …` ปิด tools, settings, hooks, MCP และไม่เก็บ session อ่านผลจาก `structured_output`
+- Codex: `codex exec --ephemeral --sandbox read-only --output-schema schema.json -o out.txt -` ไม่มี flag system prompt จึงต่อไว้หน้า transcript
+- รันใน temp folder ว่าง ไม่ดึง CLAUDE.md / AGENTS.md ของโปรเจกต์ใดเข้ามา ลบทิ้งหลังจบ
+- เลือกโมเดลจาก dropdown: Claude ใช้ alias `fable` / `opus` / `sonnet` / `haiku` (CLI ไม่มีคำสั่งดูรายชื่อ) ส่วน Codex อ่านจาก `~/.codex/models_cache.json` ที่ Codex เก็บไว้หลัง login ค่าว่างคือค่าเริ่มต้นของ CLI ส่งเป็น `--model` / `-m` เปลี่ยน AI แล้วรีเซ็ตโมเดล
+- host ตัด CLI ที่ค้างเกิน 10 นาที
+- ข้อความ `{ type: 'ping' }` ให้ host ตอบเวอร์ชันของ CLI ที่เจอและรายชื่อโมเดล Side Panel ใช้แสดงสถานะการเชื่อมต่อและเติม dropdown
 
 ### บังคับโครงสรุปด้วย JSON Schema
 
@@ -178,7 +178,7 @@ Service worker      ตรวจแท็บ Meet, ขอ stream id, สั่�
 ```
 
 - ถ้าไม่รู้คนรับหรือเดดไลน์ ให้โมเดลใส่ `"ไม่ระบุ"` ห้ามเดา
-- โมเดลที่ผู้ใช้เลือกต้องมี `structured_outputs` ใน `supported_parameters` ของรายชื่อโมเดล ถ้าไม่มี ให้ส่งแบบพรอมต์ธรรมดา แล้วตรวจ JSON ที่ได้ก่อนแปลง
+- ทั้งสอง CLI บังคับ schema ให้เอง ส่วนขยายยังตรวจ JSON ที่ได้ก่อนแปลง (`parseSummary`)
 
 ### เมื่อสรุปไม่สำเร็จ
 
@@ -186,20 +186,19 @@ transcript ถูกเซฟลงเครื่องก่อนเรีย
 
 | อาการ | ข้อความใน Side Panel |
 |---|---|
-| 401 | API key ไม่ถูกต้อง ไปแก้ในหน้าตั้งค่า |
-| 402 | เครดิต OpenRouter หมด |
-| 429 / 5xx / เน็ตหลุด | เรียกไม่สำเร็จ ลองใหม่ |
-| JSON ไม่ตรงโครง | โมเดลตอบผิดรูปแบบ ลองใหม่หรือเปลี่ยนโมเดล |
-| 503 ไม่มีผู้ให้บริการที่ไม่เก็บข้อมูล | โมเดลนี้ไม่มีผู้ให้บริการที่ไม่เก็บข้อมูล เปลี่ยนโมเดล |
-| 200 แต่มี `error` ใน body หรือ `finish_reason` เป็น `length` | คำตอบไม่ครบ ลองใหม่ |
+| host ไม่ได้ลงทะเบียน / extension ID ไม่ตรง | ยังไม่ได้เชื่อม AI (ปุ่มไปหน้าตั้งค่า) |
+| ไม่เจอ CLI (`ENOENT`) | ไม่พบ Claude Code / Codex ในเครื่อง |
+| CLI ไม่ได้ login | ยังไม่ได้ login |
+| rate limit / usage limit | quota หมด รอแล้วลองใหม่ |
+| ชื่อโมเดลผิด | ใช้โมเดลนี้ไม่ได้ เช็กชื่อโมเดล |
+| เน็ตหลุด / CLI ค้างเกิน 10 นาที / อื่นๆ | เรียก AI ไม่สำเร็จ ลองใหม่ |
+| JSON ไม่ตรงโครง | โมเดลตอบผิดรูปแบบ ลองใหม่ |
 
-ห้ามเชื่อ HTTP status อย่างเดียว OpenRouter ตอบ 200 ที่มี `error` ใน body ได้ ต้องเช็ก `body.error` และ `choices[0].finish_reason` ทุกครั้ง error มาในรูป `{ error: { code, message, metadata? } }`
-
-Gemini รับ JSON Schema แค่บางส่วน ให้ schema สรุปตื้นและเล็ก ใช้แค่ `type`, `properties`, `required`, `items`, `enum`
+host แยกประเภท error จากข้อความที่ CLI พิมพ์ (`errorKind` ใน `native/host.js`) ถ้า CLI เปลี่ยนถ้อยคำ จะตกไปเป็น "ลองใหม่"
 
 Side Panel มีปุ่ม **สรุปใหม่** ที่เอา transcript ของการบันทึกล่าสุดจาก `chrome.storage.local` ไปสรุปอีกครั้ง เปลี่ยนโมเดลก่อนกดได้ ส่วนขยายจำเฉพาะการบันทึกล่าสุด อยู่รอดหลังปิด Chrome การบันทึกครั้งถัดไปแทนที่ของเดิม
 
-**ไม่สรุปอัตโนมัติ** (เปลี่ยนเมื่อ 2026-09-24 เพื่อประหยัด token) จบการบันทึกได้แค่ `recording.webm` กับ `transcript.md` ผู้ใช้กดปุ่ม **สรุปด้วย AI** ในการ์ดการบันทึกล่าสุดเมื่อต้องการ ถ้ายังไม่มี API key ให้บอกให้ใส่ในตั้งค่าก่อน
+**ไม่สรุปอัตโนมัติ** (เปลี่ยนเมื่อ 2026-09-24 เพื่อประหยัด token) จบการบันทึกได้แค่ `recording.webm` กับ `transcript.md` ผู้ใช้กดปุ่ม **สรุปด้วย AI** ในการ์ดการบันทึกล่าสุดเมื่อต้องการ ถ้ายังไม่เชื่อม AI สรุปจะพังพร้อมปุ่มไปหน้าตั้งค่า
 
 สรุปเขียนเป็นภาษาหลักของการประชุม (โมเดลเลือกจาก transcript) ไม่ใช่ภาษาของ UI
 
@@ -264,8 +263,8 @@ Caption มีเมื่อผู้ใช้เปิด Live captions (CC) �
    - `transcript.md`
    - `summary.md`
 8. แจ้งในแชท Meet ว่ากำลังบันทึก เปิดเป็นค่าเริ่มต้น ปิดได้แต่ต้องยืนยันคำเตือนก่อน
-9. วิดีโอไม่ถูกอัปโหลด API key อยู่ที่ `chrome.storage.local` (ไม่ได้เข้ารหัส บอกผู้ใช้ในหน้าตั้งค่า)
-10. หน้าตั้งค่าใส่ OpenRouter API key และเลือกโมเดลสรุปจากรายชื่อโมเดลของ OpenRouter ค่าเริ่มต้น `google/gemini-3.8-flash`
+9. วิดีโอไม่ถูกอัปโหลด ส่วนขยายไม่เก็บ API key หรือ token ใดๆ
+10. หน้าตั้งค่าเลือก Claude Code หรือ Codex และโมเดล (ไม่บังคับ) พร้อมขั้นตอนเชื่อมและปุ่มทดสอบการเชื่อมต่อ
 11. หยุดอัดและเซฟไฟล์อัตโนมัติเมื่อปิดแท็บหรือออกจากห้อง
 12. สรุปพังแล้วบอกสาเหตุ และมีปุ่มสรุปใหม่
 
@@ -286,7 +285,7 @@ Caption มีเมื่อผู้ใช้เปิด Live captions (CC) �
 
 - Meet ไม่ขึ้นป้ายว่ากำลังอัด เพราะอัดจากฝั่งเบราว์เซอร์ผู้ใช้ ข้อความในแชทจึงเป็นทางเดียวที่คนในห้องจะรู้ การแจ้งจึงเปิดเป็นค่าเริ่มต้น ถ้าผู้ใช้จะปิด ให้ขึ้นคำเตือนว่าการอัดเสียงและภาพผู้อื่นโดยไม่แจ้งอาจขัด PDPA และนโยบายขององค์กร
 - ข้อความแจ้งในแชทควรบอกว่าอัดอะไร และจะส่ง transcript ไปสรุปด้วย AI เขียนไทยและอังกฤษในข้อความเดียว เพราะคนในห้องอาจไม่ใช่คนไทย
-- transcript ออกนอกเครื่องทางเดียวคือตอนเรียก OpenRouter และขอ `data_collection: "deny"` ทุกครั้ง
+- transcript ออกนอกเครื่องทางเดียวคือตอนสรุป ผ่าน CLI ไปที่ Anthropic หรือ OpenAI ตามเงื่อนไขบัญชีของผู้ใช้ ไม่มีค่าแบบ `data_collection: "deny"` ผู้ใช้ต้องปิดการเทรนเองในหน้าตั้งค่าบัญชี
 
 ### Chrome Web Store
 
@@ -304,4 +303,4 @@ Caption มีเมื่อผู้ใช้เปิด Live captions (CC) �
 - สรุปใช้ได้เมื่อมี transcript ถ้าปิด CC ทั้งประชุม จะได้วิดีโอกับไฟล์สรุปที่บอกว่าไม่มีข้อความให้สรุป
 - WebM จาก `MediaRecorder` ไม่มีความยาวคลิปในไฟล์ ในการทดสอบลากแถบเวลาได้ แต่บางโปรแกรมเล่นอาจลากไม่ได้ ถ้ามีคนเจอ ค่อยใช้ `ts-ebml` เขียนข้อมูลส่วนหัวใหม่หลังอัดเสร็จ
 - วิดีโอเก็บเป็น Blob chunk ใน Offscreen จนกว่าจะกด Stop ในการทดสอบหน่วยความจำของ Offscreen นิ่ง ไม่โตตามขนาดไฟล์ จึงไม่ต้องเขียนลง OPFS ระหว่างอัด ประชุม 2 ชม. ต้องมีดิสก์ว่างราว 2.2 GB
-- API key ใน `chrome.storage.local` ไม่ได้เข้ารหัส ใครเข้าถึงโปรไฟล์ Chrome ของเครื่องนั้นได้ก็อ่าน key ได้
+- การสรุปต้องให้ผู้ใช้รัน `native/install.sh` เอง ติดตั้งจาก Chrome Web Store แล้วสรุปได้ทันทีไม่ได้ และยังไม่รองรับ Windows (ต้องลงทะเบียนผ่าน registry)
