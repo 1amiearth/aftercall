@@ -205,5 +205,11 @@
   },
   "err_invoke": {
     "message": "Click the AfterCall icon in the toolbar while on this Meet tab, then press Start again"
+  },
+  "readyCount": {
+    "message": "$1 of $2 ready"
+  },
+  "noMeeting": {
+    "message": "Not in a Meet call"
   }
 }

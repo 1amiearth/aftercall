@@ -48,97 +48,125 @@ const sw = (type, extra = {}) => chrome.runtime.sendMessage({ target: 'sw', type
 // ---------- pieces ----------
 
 const b = (cls, text, action, arg = '', disabled = false) =>
-  `<button class="btn ${cls}" data-a="${action}" data-arg="${esc(arg)}" ${disabled ? 'disabled' : ''}>${esc(text)}</button>`;
-const banner = (kind, text, button = '') => `<div class="banner ${kind}" role="status"><span>${esc(text)}</span>${button}</div>`;
+  `<button class="${cls}" data-a="${action}" data-arg="${esc(arg)}" ${disabled ? 'disabled' : ''}>${text}</button>`;
+const btn = (text, action, arg) => b('btn', esc(text), action, arg);
+const link = (text, action, arg) => b('link', esc(text), action, arg);
+const note = (kind, text, action = '') => `<div class="note ${kind}" role="status"><span>${esc(text)}</span>${action}</div>`;
+
+const ICON = {
+  ok: '<path d="M6 10.3l2.6 2.6L14 7.6"/>',
+  warn: '<path d="M10 5.8v5"/><path d="M10 14.2v.01"/>',
+  err: '<path d="M6.5 10h7"/>',
+};
+const icon = (state) => `<svg class="ic ${state}" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9"/>${ICON[state]}</svg>`;
+const GEAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
+const BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
+
 const item = (state, title, detail, fix = '') =>
-  `<div class="check-item"><span class="mark" aria-hidden="true">${{ ok: '✅', warn: '⚠️', err: '⛔' }[state]}</span>
-   <div class="grow">${esc(title)}<div class="muted">${esc(detail)}</div></div>${fix}</div>`;
+  `<div class="item ${state}">${icon(state)}<div><div class="title">${esc(title)}</div><div class="detail">${esc(detail)}</div></div>${fix}</div>`;
 
 const live = () => ['recording', 'paused'].includes(s.rec.phase);
 const recordingHere = () => s.rec.tabId === s.tabId;
 
 function checklist() {
   const { settings: st, page } = s;
-  const meet = !s.meetCode ? item('err', t('meetTab'), t('meetTabNone'))
-    : !page ? item('warn', t('meetTab'), t('meetReload'))
-    : item('ok', t('meetTab'), s.meetCode);
-  const cc = item(page?.cc ? 'ok' : 'warn', t('cc'), page?.cc ? t('ccOn') : t('ccOff'));
-  const key = st.apiKey ? item('ok', t('apiKey'), st.model || DEFAULT_MODEL)
-    : item('warn', t('apiKey'), t('apiKeyMissing'), b('small', t('addKey'), 'settings'));
-  const name = st.selfName ? item('ok', t('selfName'), st.selfName)
-    : item('warn', t('selfName'), t('selfNameMissing'), b('small', t('setName'), 'settings'));
-  const mic = !st.mic ? item('ok', t('mic'), t('micOff'), b('small', t('turnOn'), 'toggle', 'mic'))
-    : s.mic === 'granted' ? item('ok', t('mic'), t('micOn'), b('small', t('turnOff'), 'toggle', 'mic'))
-    : item('warn', t('mic'), t('micAsk'), b('small', t('allow'), 'allowMic'));
-  const chat = st.chat ? item('ok', t('chat'), t('chatOn'), b('small', t('turnOff'), 'toggle', 'chat'))
-    : item('warn', t('chat'), t('chatOff'), b('small', t('turnOn'), 'toggle', 'chat'));
-  return `<div><div class="check-title">${t('checklist')}</div>${meet}${cc}${key}${name}${mic}${chat}</div>`;
+  const rows = [
+    !s.meetCode ? ['err', t('meetTab'), t('meetTabNone')]
+      : !page ? ['warn', t('meetTab'), t('meetReload')]
+      : ['ok', t('meetTab'), s.meetCode],
+    page?.cc ? ['ok', t('cc'), t('ccOn')] : ['warn', t('cc'), t('ccOff')],
+    st.apiKey ? ['ok', t('apiKey'), st.model || DEFAULT_MODEL] : ['warn', t('apiKey'), t('apiKeyMissing'), link(t('addKey'), 'settings')],
+    st.selfName ? ['ok', t('selfName'), st.selfName] : ['warn', t('selfName'), t('selfNameMissing'), link(t('setName'), 'settings')],
+    !st.mic ? ['ok', t('mic'), t('micOff'), link(t('turnOn'), 'toggle', 'mic')]
+      : s.mic === 'granted' ? ['ok', t('mic'), t('micOn'), link(t('turnOff'), 'toggle', 'mic')]
+      : ['warn', t('mic'), t('micAsk'), link(t('allow'), 'allowMic')],
+    st.chat ? ['ok', t('chat'), t('chatOn'), link(t('turnOff'), 'toggle', 'chat')] : ['warn', t('chat'), t('chatOff'), link(t('turnOn'), 'toggle', 'chat')],
+  ];
+  const ready = rows.filter((r) => r[0] === 'ok').length;
+  return `<section class="setup" aria-label="${esc(t('checklist'))}">
+    <div class="setup-head"><h2>${t('checklist')}</h2><span class="count">${t('readyCount', ready, rows.length)}</span></div>
+    ${rows.map((r) => item(...r)).join('')}</section>`;
+}
+
+function startButton() {
+  const busyElsewhere = live() && !recordingHere();
+  const blocked = !s.meetCode || busyElsewhere;
+  return `${b('btn primary big', `<span class="rec-dot"></span>${esc(t('start'))}`, 'start', '', blocked)}
+    ${blocked ? `<p class="hint">${esc(busyElsewhere ? t('err_busy') : t('meetTabNone'))}</p>` : ''}`;
 }
 
 function recordingView() {
   const paused = s.rec.phase === 'paused';
   const lines = s.latest?.lines?.slice(-3) ?? [];
   const warns = [
-    s.page && !s.page.cc ? banner('warn', t('ccOffWarn')) : '',
-    s.settings.mic && s.latest && s.latest.micOk === false ? banner('warn', t('micFailedWarn')) : '',
+    s.page && !s.page.cc ? note('warn', t('ccOffWarn')) : '',
+    s.settings.mic && s.latest?.micOk === false ? note('warn', t('micFailedWarn')) : '',
   ].join('');
-  return `<div class="recbar"><span class="dot ${paused ? 'still' : ''}"></span>
-      <span class="timer" id="timer">${fmt(videoMs(s.rec.clock, Date.now()))}</span>
-      <span>${t(paused ? 'paused' : 'recording')}</span><span class="spacer"></span>
-      ${paused ? b('small', t('resume'), 'resume') : b('small', t('pause'), 'pause')}${b('small rec', t('stop'), 'stop')}</div>
+  return `<section class="onair ${paused ? 'paused' : ''}" aria-live="polite">
+      <div class="onair-state"><span class="pulse"></span>${t(paused ? 'paused' : 'recording')}</div>
+      <div class="timer" id="timer">${fmt(videoMs(s.rec.clock, Date.now()))}</div>
+      <div class="controls">${paused ? btn(t('resume'), 'resume') : btn(t('pause'), 'pause')}${b('btn primary', esc(t('stop')), 'stop')}</div>
+    </section>
     ${warns}
-    <div class="check-title">${t('lastCaptions')}</div>
-    <div class="tail">${lines.length
-      ? lines.map((l) => `<div><span class="muted">${fmt(l.t)}</span> <b>${esc(l.speaker)}:</b> ${esc(l.text)}</div>`).join('')
-      : `<span class="muted">${t('noCaptions')}</span>`}</div>`;
+    <section class="captions"><h2>${t('lastCaptions')}</h2>
+      ${lines.length
+        ? lines.map((l) => `<div class="line"><time>${fmt(l.t)}</time><div><b>${esc(l.speaker)}</b> ${esc(l.text)}</div></div>`).join('')
+        : `<div class="empty">${t('noCaptions')}</div>`}
+    </section>`;
 }
 
 function latestView() {
   const l = s.latest;
   if (!l || l.summary?.status === 'none') return '';
   const sum = l.summary;
-  const again = l.lines.length ? b('small', t('summarizeAgain'), 'again') : '';
+  const again = l.lines.length && sum.status !== 'running' ? btn(t('summarizeAgain'), 'again') : '';
   const status = {
-    running: banner('info', t('summaryRunning')),
-    done: banner('ok', t('summaryDone')),
-    skipped: banner('warn', t('summarySkipped'), again),
-    empty: banner('warn', t('summaryEmpty')),
-    failed: banner('err', t(`fail_${String(sum.kind).replace('-', '')}`), again),
+    running: note('info', t('summaryRunning')),
+    skipped: note('warn', t('summarySkipped')),
+    empty: note('warn', t('summaryEmpty')),
+    failed: note('err', t(`fail_${String(sum.kind).replace('-', '')}`)),
   }[sum.status] ?? '';
-  return `${status}<div class="card"><div class="muted">${t('latest')} · ${esc(l.meetCode)} · ${fmt(l.durationMs)}</div>
-    <div class="row">${l.videoDownloadId ? b('small', t('showFiles'), 'showFiles') : ''}${sum.status === 'done' ? again : ''}</div></div>`;
+  const hasSummary = sum.status === 'done' || sum.status === 'empty';
+  const file = (type, name, there = true) => `<li class="${there ? '' : 'missing'}"><span class="ftype">${type}</span>${name}</li>`;
+  return `<section class="latest">
+    <div class="latest-head"><h2>${t('latest')} ${esc(l.meetCode)}</h2><span class="dur">${fmt(l.durationMs)}</span></div>
+    ${status}
+    <ul class="files">${file('WEBM', 'recording.webm', !!l.videoDownloadId)}${file('MD', 'transcript.md')}${file('MD', 'summary.md', hasSummary)}</ul>
+    <div class="actions">${l.videoDownloadId ? btn(t('showFiles'), 'showFiles') : ''}${again}</div>
+  </section>`;
 }
 
 function mainView() {
-  const busyElsewhere = live() && !recordingHere();
-  const body = s.rec.phase === 'stopping' ? banner('info', t('stopping'))
+  const room = s.meetCode ? `<div class="room">${esc(s.meetCode)}</div>` : `<div class="room none">${t('noMeeting')}</div>`;
+  const body = s.rec.phase === 'stopping' ? note('info', t('stopping'))
     : live() && recordingHere() ? recordingView()
-    : `${checklist()}${b('rec', `● ${t('start')}`, 'start', '', !s.meetCode || busyElsewhere)}`;
-  return `<header>AfterCall<button class="icon-btn" data-a="settings" aria-label="${t('settings')}">⚙</button></header>
-    <main>${s.error ? banner('err', s.error) : ''}${body}${live() ? '' : latestView()}</main>`;
+    : `${checklist()}${startButton()}`;
+  return `<div class="top">${room}<button class="icon-btn" data-a="settings" aria-label="${esc(t('settings'))}">${GEAR}</button></div>
+    <main>${s.error ? note('err', s.error) : ''}${body}${live() ? '' : latestView()}</main>`;
 }
 
 function settingsView() {
   const st = s.settings;
-  return `<header>${t('settings')}<button class="icon-btn" data-a="back">${t('back')}</button></header>
-  <main>
+  return `<div class="top"><button class="icon-btn" data-a="back" aria-label="${esc(t('back'))}">${BACK}</button><div class="room">${t('settings')}</div></div>
+  <main><section class="fields">
     <label class="field">${t('keyLabel')}
       <input type="password" data-setting="apiKey" value="${esc(st.apiKey)}" placeholder="sk-or-v1-…" autocomplete="off">
-      <span class="muted">${t('keyNote')}</span></label>
+      <span class="sub">${t('keyNote')}</span></label>
     <label class="field">${t('modelLabel')}
       <input list="models" data-setting="model" value="${esc(st.model)}" placeholder="${DEFAULT_MODEL}">
       <datalist id="models"></datalist></label>
     <label class="field">${t('nameLabel')}
       <input data-setting="selfName" value="${esc(st.selfName)}">
-      <span class="muted">${t('nameHint')}</span></label>
-    <label class="toggle"><input type="checkbox" data-setting="mic" ${st.mic ? 'checked' : ''}> ${t('micLabel')}</label>
-    <label class="toggle"><input type="checkbox" data-setting="chat" ${st.chat ? 'checked' : ''}> ${t('chatLabel')}</label>
-    ${st.chat ? '' : banner('err', t('chatOff'))}
-  </main>`;
+      <span class="sub">${t('nameHint')}</span></label>
+    <label class="switch">${t('micLabel')}<input type="checkbox" role="switch" data-setting="mic" ${st.mic ? 'checked' : ''}></label>
+    <label class="switch">${t('chatLabel')}<input type="checkbox" role="switch" data-setting="chat" ${st.chat ? 'checked' : ''}></label>
+  </section>
+  ${st.chat ? '' : note('err', t('chatOff'))}</main>`;
 }
 
 const chatOffWarning = () => s.askChatOff
-  ? banner('err', t('chatConfirm'), `${b('small', t('confirmOff'), 'chatOff')}${b('small', t('keepOn'), 'keepChat')}`) : '';
+  ? `<div class="note err" role="alert"><span>${esc(t('chatConfirm'))}</span></div>
+     <div class="actions">${b('btn primary', esc(t('confirmOff')), 'chatOff')}${btn(t('keepOn'), 'keepChat')}</div>` : '';
 
 function render() {
   app.innerHTML = (s.view === 'settings' ? settingsView() : mainView()).replace('<main>', `<main>${chatOffWarning()}`);
