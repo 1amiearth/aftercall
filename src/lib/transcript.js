@@ -21,9 +21,12 @@ export const folderName = (date, meetCode) =>
   `AfterCall/${localDate(date)}_${localTime(date).replace(':', '')}_${meetCode}`;
 
 /** Header shared by transcript.md and summary.md. */
-export const header = ({ meetCode, startedAt, durationMs }) => {
+export const header = (rec) => `# Meet ${rec.meetCode}\n${when(rec)}\n`;
+
+/** "2026-09-24 14:30 · 52:10": start and length of a recording. */
+export const when = ({ startedAt, durationMs }) => {
   const d = new Date(startedAt);
-  return `# Meet ${meetCode}\n${localDate(d)} ${localTime(d)} · ${fmt(durationMs)}\n`;
+  return `${localDate(d)} ${localTime(d)} · ${fmt(durationMs)}`;
 };
 
 /**

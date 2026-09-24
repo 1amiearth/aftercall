@@ -7,7 +7,8 @@ const rec = {
   lines: [{ t: 65_500, speaker: '<img src=x onerror=alert(1)>', text: 'a & b' }, { t: 5_000, mark: true, speaker: '', text: 'สำคัญ' }],
 };
 const summary = { brief: 'Sprint planning', topics: [], decisions: [], risks: [], follow_up_questions: [],
-  action_items: [{ task: 'Ship', owner: 'Ann', deadline: 'Fri', at: '01:05' }, { task: 'Ask', owner: 'Bo', deadline: 'x', at: 'soon' }] };
+  action_items: [{ task: 'Ship', owner: 'Ann', deadline: 'Fri', at: '01:05' }, { task: 'Ask', owner: 'Bo', deadline: 'x', at: 'soon' }],
+  extra_sections: [{ title: 'Next meeting', items: ['Thu 10:00'] }] };
 
 test('transcript lines jump to their second, in time order, escaped', () => {
   const html = reviewHtml({ ...rec, video: 'recording (1).webm' });
@@ -23,5 +24,6 @@ test('summary action items link only valid timestamps; no video, no player', () 
   assert.match(html, /<td><a href="#" data-t="65">01:05<\/a><\/td>/);
   assert.match(html, /<td>soon<\/td>/);
   assert.match(html, /<h2>Action items<\/h2>/);
+  assert.match(html, /<\/table><h2>Next meeting<\/h2><ul><li>Thu 10:00<\/li><\/ul><h2>Risks/);
   assert.doesNotMatch(html, /<video/);
 });

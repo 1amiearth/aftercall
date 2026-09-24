@@ -2,7 +2,7 @@
 // Every [mm:ss] jumps the video there. It opens from disk (file://), so it sits beside recording.webm and needs no server.
 import { fmt } from './clock.js';
 import { header, talkShare } from './transcript.js';
-import { labels } from './summary.js';
+import { labels, extraSections } from './summary.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const seconds = (mmss) => { const m = /^(\d+):(\d{2})$/.exec(String(mmss ?? '').trim()); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
@@ -17,7 +17,7 @@ function summarySection(j) {
     : list([]);
   return `<section><h2>${esc(H[0])}</h2><p>${esc(j.brief)}</p>
     <h2>${esc(H[1])}</h2>${list(j.topics)}<h2>${esc(H[2])}</h2>${list(j.decisions)}
-    <h2>${esc(H[3])}</h2>${actions}<h2>${esc(H[4])}</h2>${list(j.risks)}<h2>${esc(H[5])}</h2>${list(j.follow_up_questions)}</section>`;
+    <h2>${esc(H[3])}</h2>${actions}${extraSections(j).map((x) => `<h2>${esc(x.title)}</h2>${list(x.items)}`).join('')}<h2>${esc(H[4])}</h2>${list(j.risks)}<h2>${esc(H[5])}</h2>${list(j.follow_up_questions)}</section>`;
 }
 
 /**

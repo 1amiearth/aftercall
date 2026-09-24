@@ -308,11 +308,8 @@
   "fail_model": {
     "message": "Summary failed: $1 cannot use this model. Check the model name in Settings"
   },
-  "copySummary": {
-    "message": "Copy summary"
-  },
-  "copyActions": {
-    "message": "Copy action items"
+  "copySlack": {
+    "message": "Copy for Slack"
   },
   "talkTitle": {
     "message": "Who talked how much (by amount of text)"
@@ -333,7 +330,7 @@
     "message": "Extra instructions for summaries"
   },
   "notesHint": {
-    "message": "Sent with every summary to say what to focus on. The 6 summary sections stay the same"
+    "message": "Sent with every summary to say what to focus on, or to ask for an extra section. The 6 main sections stay"
   },
   "notesPlaceholder": {
     "message": "e.g. This is a daily standup. Focus on blockers and who needs help"

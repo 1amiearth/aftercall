@@ -1,7 +1,7 @@
 import { SETTINGS } from '../lib/settings.js';
-import { meetCodeFromUrl, talkShare, header } from '../lib/transcript.js';
+import { meetCodeFromUrl, talkShare, when } from '../lib/transcript.js';
 import { videoMs, fmt } from '../lib/clock.js';
-import { ping, PROVIDERS, summaryMarkdown, actionItemsMarkdown } from '../lib/summary.js';
+import { ping, PROVIDERS, slackMessage } from '../lib/summary.js';
 import { captionHealth, speech } from '../lib/health.js';
 
 // Layout: pre-flight checklist (ticket 05, variant B). See docs/DESIGN.md "หน้าตา Side Panel".
@@ -163,7 +163,7 @@ function catchupView() {
   const j = c.result;
   const list = (items) => `<ul>${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
   return `<section class="latest catchup">
-    <div class="latest-head"><h2>${esc(t('catchUpTitle', fmt(c.at)))}</h2>${link(t('copy'), 'copy', summaryMarkdown(j))}</div>
+    <div class="latest-head"><h2>${esc(t('catchUpTitle', fmt(c.at)))}</h2>${link(t('copySlack'), 'copySlackCatchup')}</div>
     <p>${esc(j.brief)}</p>
     ${j.decisions.length ? `<h3>${esc(t('decisions'))}</h3>${list(j.decisions)}` : ''}
     ${j.action_items.length ? `<h3>Action items</h3>${list(j.action_items.map((a) => `${a.task} (${a.owner} · ${a.deadline})`))}` : ''}
@@ -199,7 +199,7 @@ function latestView() {
     ${status}
     <ul class="files">${file('WEBM', 'recording.webm', !!l.videoDownloadId)}${file('HTML', 'review.html', l.reviewDownloadId != null)}${file('MD', 'transcript.md')}${file('MD', 'summary.md', hasSummary)}</ul>
     ${talkView(l.lines)}
-    ${result ? `<div class="actions">${btn(t('copySummary'), 'copySummary')}${result.action_items.length ? btn(t('copyActions'), 'copyActions') : ''}</div>` : ''}
+    ${result ? `<div class="actions">${btn(t('copySlack'), 'copySlack')}</div>` : ''}
     ${flash()}
     ${s.askDelete
       ? `<div class="note err" role="alert"><span>${esc(t('deleteConfirm'))}</span></div>
@@ -295,6 +295,16 @@ function render() {
 
 // ---------- actions ----------
 
+// HTML for apps that keep formatting on paste (Slack, Notion, email), plain text for the rest.
+async function copyRich({ text, html }) {
+  await navigator.clipboard.write([new ClipboardItem({
+    'text/plain': new Blob([text], { type: 'text/plain' }),
+    'text/html': new Blob([html], { type: 'text/html' }),
+  })]);
+  s.flash = t('copied');
+  setTimeout(() => { s.flash = null; render(); }, 2500);
+}
+
 const actions = {
   async start() {
     s.error = null;
@@ -321,8 +331,8 @@ const actions = {
     const res = await sw('catchup');
     if (!res?.ok && res?.error === 'empty') s.error = t('summaryEmpty');
   },
-  copySummary: () => actions.copy(`${header(s.latest)}\n${summaryMarkdown(s.latest.summary.result)}`),
-  copyActions: () => actions.copy(actionItemsMarkdown(s.latest.summary.result)),
+  copySlack: () => copyRich(slackMessage(s.latest.summary.result, when(s.latest))),
+  copySlackCatchup: () => copyRich(slackMessage(s.catchup.result, `00:00–${fmt(s.catchup.at)}`)),
   showFiles: () => chrome.downloads.show(s.latest.videoDownloadId),
   deleteAsk() { s.askDelete = true; },
   deleteNo() { s.askDelete = false; },
