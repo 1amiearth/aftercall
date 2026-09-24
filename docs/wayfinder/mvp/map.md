@@ -14,6 +14,7 @@ Spec ของ MVP (`docs/DESIGN.md`) ไม่มีเรื่องไหน
 - โค้ด prototype เป็นของทิ้ง เก็บใน branch `prototype/<ชื่อ>` ไม่ merge
 - ใช้ skill `/grilling`, `/domain-modeling`, `/prototype`, `/research`
 - ความเห็นประจำ: JavaScript ล้วน ไม่มี build, เลือกทางที่ง่ายที่สุดที่ใช้ได้
+- 2026-09-24 ผู้บันทึกสั่งเริ่ม dev ก่อนปิด ticket 02 และ 04 (branch `feat/mvp`) โครง caption และพรอมต์สรุปในโค้ดเป็นสมมติฐานจาก prototype ต้องยืนยันด้วยการทดสอบจริง
 
 ### ตัดสินใจแล้วตอนตั้งแผน (grilling รอบแรก 2026-09-24)
 
