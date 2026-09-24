@@ -1,6 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { meetCodeFromUrl, speakerName, folderName, transcriptMarkdown } from '../src/lib/transcript.js';
+import { meetCodeFromUrl, speakerName, folderName, transcriptMarkdown, talkShare } from '../src/lib/transcript.js';
+
+test('talk share by text, marks ignored, largest first', () => {
+  const share = talkShare([
+    { t: 0, speaker: 'A', text: 'x' },
+    { t: 1, speaker: 'B', text: 'xxx' },
+    { t: 2, mark: true, speaker: '', text: 'ปักหมุดว่าสำคัญยาวมากๆ' },
+    { t: 3, speaker: 'A', text: 'x' },
+  ]);
+  assert.deepEqual(share, [{ speaker: 'B', share: 0.6, turns: 1 }, { speaker: 'A', share: 0.4, turns: 2 }]);
+  assert.deepEqual(talkShare([]), []);
+});
 
 test('meet code from URL', () => {
   assert.equal(meetCodeFromUrl('https://meet.google.com/abc-defg-hij'), 'abc-defg-hij');
@@ -24,7 +35,7 @@ test('folder and transcript format', () => {
     meetCode: 'abc-defg-hij', startedAt: d.getTime(), durationMs: 3_130_000,
     lines: [{ t: 12_000, speaker: 'สมชาย', text: 'เริ่มกันเลยครับ' }],
   });
-  assert.equal(md, '# Meet abc-defg-hij\n2026-09-24 14:05 · 52:10\n\n[00:12] **สมชาย:** เริ่มกันเลยครับ\n');
+  assert.equal(md, '# Meet abc-defg-hij\n2026-09-24 14:05 · 52:10\nSpeakers: สมชาย 100%\n\n[00:12] **สมชาย:** เริ่มกันเลยครับ\n');
   const marked = transcriptMarkdown({ meetCode: 'a', startedAt: d.getTime(), durationMs: 0,
     lines: [{ t: 30_000, speaker: 'B', text: 'later' }, { t: 5_000, mark: true, text: 'ช่วงสำคัญ' }] });
   assert.match(marked, /\[00:05\] ⭐ \*\*ช่วงสำคัญ\*\*\n\[00:30\] \*\*B:\*\* later/);

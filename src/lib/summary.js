@@ -68,14 +68,19 @@ const sendNative = (msg) => chrome.runtime.sendNativeMessage(HOST, msg);
 export const ping = (send = sendNative) => send({ type: 'ping' })
   .then((r) => (r?.ok ? { clis: r.clis, models: r.models ?? {} } : { error: r?.message ?? 'bad reply' }), (e) => ({ error: String(e?.message ?? e) }));
 
+/** SYSTEM plus the recorder's own instructions from Settings, which cannot override the rules above them. */
+export const systemPrompt = (notes = '') => (notes.trim()
+  ? `${SYSTEM}\n\nExtra instructions from the recorder. Follow them unless they conflict with the rules above:\n${notes.trim()}`
+  : SYSTEM);
+
 /**
- * @param {{ provider: string, model?: string, effort?: string, transcript: string, send?: (msg: object) => Promise<any> }} opts
+ * @param {{ provider: string, model?: string, effort?: string, notes?: string, transcript: string, send?: (msg: object) => Promise<any> }} opts
  * @returns {Promise<{ ok: true, summary: object } | { ok: false, kind: 'nohost' | 'nocli' | 'auth' | 'limit' | 'model' | 'retry' | 'format', message: string }>}
  */
-export async function summarize({ provider, model = '', effort = '', transcript, send = sendNative }) {
+export async function summarize({ provider, model = '', effort = '', notes = '', transcript, send = sendNative }) {
   let res;
   try {
-    res = await send({ type: 'summarize', provider, model, effort, system: SYSTEM, prompt: `Transcript:\n\n${transcript}`, schema: SCHEMA });
+    res = await send({ type: 'summarize', provider, model, effort, system: systemPrompt(notes), prompt: `Transcript:\n\n${transcript}`, schema: SCHEMA });
   } catch (e) {
     return { ok: false, kind: 'nohost', message: String(e?.message ?? e) }; // host not installed, not allowed, or crashed
   }
@@ -86,12 +91,18 @@ export async function summarize({ provider, model = '', effort = '', transcript,
 
 const isThai = (s) => (s.match(/[฀-๿]/g) || []).length > (s.match(/[A-Za-z]/g) || []).length * 0.5;
 
+/** Section headings in the summary's language: 6 sections, "none", then the action item table header. */
+export const labels = (j) => (isThai(j.brief)
+  ? ['สรุปสั้น', 'หัวข้อที่คุย', 'การตัดสินใจ', 'Action items', 'ความเสี่ยง / ของที่ยังไม่ชัด', 'คำถามที่ต้องตามต่อ', 'ไม่มี', 'งาน | คนรับ | เดดไลน์ | นาที']
+  : ['Summary', 'Topics', 'Decisions', 'Action items', 'Risks / unclear', 'Follow-up questions', 'None', 'Task | Owner | Deadline | At']);
+
+/** Action items as a Markdown checklist, for pasting into Slack, Notion or an issue. */
+export const actionItemsMarkdown = (j) =>
+  j.action_items.map((a) => `- [ ] ${a.task} (${a.owner} · ${a.deadline} · ${a.at})`).join('\n') + '\n';
+
 /** summary.md body (after the shared header). Headings follow the summary's language. */
 export function summaryMarkdown(j) {
-  const th = isThai(j.brief);
-  const H = th
-    ? ['สรุปสั้น', 'หัวข้อที่คุย', 'การตัดสินใจ', 'Action items', 'ความเสี่ยง / ของที่ยังไม่ชัด', 'คำถามที่ต้องตามต่อ', 'ไม่มี', 'งาน | คนรับ | เดดไลน์ | นาที']
-    : ['Summary', 'Topics', 'Decisions', 'Action items', 'Risks / unclear', 'Follow-up questions', 'None', 'Task | Owner | Deadline | At'];
+  const H = labels(j);
   const list = (a) => (a.length ? a.map((x) => `- ${x}`).join('\n') : `- ${H[6]}`);
   const cell = (s) => String(s ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ');
   const actions = j.action_items.length

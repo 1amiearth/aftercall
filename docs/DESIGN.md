@@ -74,6 +74,7 @@ Service worker      ตรวจแท็บ Meet, ขอ stream id, สั่�
 | Offscreen | `src/offscreen/` | `getUserMedia` จาก stream id, Web Audio mix, `MediaRecorder` |
 | Content script | `src/content.js` | `MutationObserver` บน captions, พิมพ์แจ้งในช่องแชท Meet |
 | สรุป | `src/lib/summary.js` | ประกอบพรอมต์จาก transcript แล้วส่งให้ native host |
+| หน้ารีวิว | `src/lib/review.js` | สร้าง `review.html` วิดีโอคู่ transcript และสรุป |
 | Native host | `native/` | รัน CLI ของ Claude Code หรือ Codex ในเครื่อง ส่ง JSON กลับ |
 
 `manifest.json` อย่างน้อยต้องมี
@@ -123,7 +124,13 @@ Service worker      ตรวจแท็บ Meet, ขอ stream id, สั่�
 - **ป้าย REC** บนไอคอนส่วนขยาย (`II` ตอนพัก) ผูกกับการเปลี่ยนสถานะใน service worker
 - **คีย์ลัด** (`chrome.commands`): `Alt+Shift+R` เริ่ม/หยุด, `Alt+Shift+M` ปักหมุด การกดคีย์ลัดนับเป็นการเรียกใช้ส่วนขยาย จึงจับแท็บได้โดยไม่ต้องเปิดแผง error ตอนเริ่มจากคีย์ลัดเก็บใน `storage.session` ให้แผงแสดง
 - **ปักหมุด**: เพิ่มบรรทัด `[mm:ss] ⭐ **ปักหมุดว่าสำคัญ**` ใน transcript พรอมต์สรุปสั่งให้ครอบคลุมสิ่งที่พูดรอบจุดนั้น
-- **ค่าใช้จ่ายก่อนสรุป**: ปุ่มสรุปแสดงราคาประมาณจาก `pricing` ของโมเดลใน `/api/v1/models` คิด ~2.5 ตัวอักษรต่อ token และคำตอบ ~1,500 token
+- ~~**ค่าใช้จ่ายก่อนสรุป**~~ เอาออกพร้อม OpenRouter การสรุปผ่าน CLI ใช้ quota ของ subscription ไม่มีราคาต่อครั้งให้แสดง
+- **คัดลอกสรุป / action items**: การ์ดการบันทึกล่าสุดมีปุ่มคัดลอกสรุปทั้งฉบับ (Markdown พร้อมหัว) และ action items เป็นเช็กลิสต์ `- [ ] งาน (คนรับ · เดดไลน์ · นาที)` ผลสรุป JSON เก็บใน `latest.summary.result`
+- **คำสั่งเพิ่มเติมสำหรับสรุป** (`aiNotes` ในตั้งค่า ไม่เกิน 1,000 ตัวอักษร): ต่อท้าย system prompt ใต้กฎหลัก (`systemPrompt()` ใน `summary.js`) บอกได้ว่าเน้นอะไร แต่ไม่เปลี่ยน 6 หัวข้อ เพราะ schema บังคับอยู่
+- **ใครพูดเท่าไร** (`talkShare()` ใน `transcript.js`): สัดส่วนตามจำนวนตัวอักษรของแต่ละผู้พูด ไม่นับ ⭐ แสดงใน Side Panel, บรรทัด `Speakers:` ใน `transcript.md` และหัว `review.html` ใช้ตัวอักษรเพราะช่วงพูดมีแค่เวลาเริ่ม ไม่มีเวลาจบ
+- **`review.html`** (`src/lib/review.js`): หน้าเดียวในโฟลเดอร์ประชุม วิดีโอคู่ transcript และสรุป กด `[mm:ss]` แล้ววิดีโอกระโดดไปตรงนั้น เปิดจากดิสก์ได้เพราะอ้าง `recording.webm` แบบ relative เขียนตอน Stop และเขียนใหม่ทุกครั้งที่สรุปเสร็จ โดยลบไฟล์เดิมก่อน (`reviewDownloadId`) โฟลเดอร์จึงมีไฟล์เดียว
+- **สรุปถึงตอนนี้**: ระหว่างบันทึกกดสรุป transcript เท่าที่มี สำหรับคนเข้าห้องสายหรือหลุดไปช่วงหนึ่ง ผลอยู่ใน `storage.session.catchup` แสดงแค่สรุปสั้น การตัดสินใจ และ action items ในแถบบันทึก ไม่เขียนไฟล์ ล้างเมื่อเริ่มบันทึกครั้งใหม่
+- ไฟล์ข้อความโหลดเป็น data URL แบบ base64 แทน percent-encoding ภาษาไทยแบบ percent-encoding ยาวขึ้น ~9 เท่า ประชุมยาวอาจเกินเพดาน URL 2 MB ของ Chrome
 
 ---
 
@@ -158,13 +165,13 @@ Service worker      ตรวจแท็บ Meet, ขอ stream id, สั่�
 - Claude Code: `claude -p --output-format json --json-schema … --system-prompt …` ปิด tools, settings, hooks, MCP และไม่เก็บ session อ่านผลจาก `structured_output`
 - Codex: `codex exec --ephemeral --sandbox read-only --output-schema schema.json -o out.txt -` ไม่มี flag system prompt จึงต่อไว้หน้า transcript
 - รันใน temp folder ว่าง ไม่ดึง CLAUDE.md / AGENTS.md ของโปรเจกต์ใดเข้ามา ลบทิ้งหลังจบ
-- เลือกโมเดลจาก dropdown: Claude ใช้ alias `fable` / `opus` / `sonnet` / `haiku` (CLI ไม่มีคำสั่งดูรายชื่อ) ส่วน Codex อ่านจาก `~/.codex/models_cache.json` ที่ Codex เก็บไว้หลัง login ค่าว่างคือค่าเริ่มต้นของ CLI ส่งเป็น `--model` / `-m` เปลี่ยน AI แล้วรีเซ็ตโมเดล
+- เลือกโมเดลจาก dropdown: Claude อ่านจาก catalog ใน `~/.claude/cache/model-catalog` ถ้ายังไม่มีใช้ alias `fable` / `opus` / `sonnet` / `haiku` (CLI ไม่มีคำสั่งดูรายชื่อ) ส่วน Codex อ่านจาก `~/.codex/models_cache.json` ที่ Codex เก็บไว้หลัง login ค่าว่างคือค่าเริ่มต้นของ CLI ส่งเป็น `--model` / `-m` เปลี่ยน AI แล้วรีเซ็ตโมเดล
 - host ตัด CLI ที่ค้างเกิน 10 นาที
 - ข้อความ `{ type: 'ping' }` ให้ host ตอบเวอร์ชันของ CLI ที่เจอและรายชื่อโมเดล Side Panel ใช้แสดงสถานะการเชื่อมต่อและเติม dropdown
 
 ### บังคับโครงสรุปด้วย JSON Schema
 
-ไม่พึ่งพรอมต์อย่างเดียว ส่ง `response_format: { type: "json_schema", json_schema: { strict: true, schema } }` ให้โมเดลตอบเป็น JSON ตามโครง 6 หัวข้อ แล้วส่วนขยายแปลงเป็น `summary.md` เอง หัวข้อจึงครบและเรียงเหมือนกันทุกครั้ง
+ไม่พึ่งพรอมต์อย่างเดียว ส่ง schema ให้ CLI บังคับ (`--json-schema` ของ Claude Code, `--output-schema` ของ Codex) ให้โมเดลตอบเป็น JSON ตามโครง 6 หัวข้อ แล้วส่วนขยายแปลงเป็น `summary.md` เอง หัวข้อจึงครบและเรียงเหมือนกันทุกครั้ง
 
 ```json
 {
@@ -229,6 +236,7 @@ Side Panel มีปุ่ม **สรุปใหม่** ที่เอา tr
 ```text
 Downloads/AfterCall/2026-09-24_1430_abc-defg-hij/
     recording.webm
+    review.html
     transcript.md
     summary.md
 ```

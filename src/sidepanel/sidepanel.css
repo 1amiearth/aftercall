@@ -110,12 +110,22 @@ main { padding: 12px 16px 24px; display: flex; flex-direction: column; gap: 14px
 .files li.missing { color: var(--muted); text-decoration: line-through; }
 .files .ftype { width: 38px; font-size: 10.5px; font-weight: 700; text-align: center; border-radius: 4px; padding: 1px 0; background: var(--page); color: var(--muted); }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.latest h3 { margin: 0; font-size: 12px; font-weight: 600; color: var(--muted); }
+.catchup p, .catchup ul { margin: 0; font-size: 13px; }
+.catchup ul { padding-left: 18px; }
+.talk { display: flex; flex-direction: column; gap: 4px; }
+.talk-row { display: grid; grid-template-columns: minmax(0, 1fr) 90px 36px; gap: 8px; align-items: center; font-size: 12.5px; }
+.talk-row .who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.talk-row .bar { height: 6px; border-radius: 3px; background: var(--page); overflow: hidden; }
+.talk-row .bar i { display: block; height: 100%; background: var(--accent); }
+.talk-row .pct { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* settings */
 .fields { display: flex; flex-direction: column; gap: 16px; background: var(--surface); border-radius: var(--radius-lg); padding: 16px 14px; }
 label.field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; }
 label.field .sub { font-weight: 400; color: var(--muted); font-size: 12px; }
-label.field input, label.field select { font: inherit; font-weight: 400; padding: 9px 11px; border: 0; border-radius: var(--radius-sm); background: var(--page); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+label.field textarea { resize: vertical; }
+label.field input, label.field select, label.field textarea { font: inherit; font-weight: 400; padding: 9px 11px; border: 0; border-radius: var(--radius-sm); background: var(--page); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
 .connect { gap: 12px; }
 .connect h2 { margin: 0; font-size: 13px; font-weight: 600; }
 .steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }

@@ -45,8 +45,8 @@ Spec ของ MVP (`docs/DESIGN.md`) ไม่มีเรื่องไหน
 
 ## Not yet specified
 
-- **พรอมต์และ schema สรุปฉบับจริง**: จะชัดหลังได้ transcript จริง
-- **`data_collection: "deny"` หรือ `zdr: true`**: zdr เข้มกว่าแต่อาจเหลือผู้ให้บริการน้อยกว่า ตัดสินใจพร้อม [Prototype คุณภาพสรุปภาษาไทย](issues/04-prototype-summary-quality.md)
+- **พรอมต์และ schema สรุปฉบับจริง**: จะชัดหลังได้ transcript จริง ([Prototype คุณภาพสรุปภาษาไทย](issues/04-prototype-summary-quality.md))
+- ~~`data_collection: "deny"` หรือ `zdr: true`~~ ไม่ต้องตัดสินใจแล้ว เลิกใช้ OpenRouter เมื่อ 2026-09-24 สรุปผ่าน Claude Code / Codex ในเครื่อง ผู้ใช้ปิดการเทรนเองในหน้าตั้งค่าบัญชี
 
 ## Out of scope
 

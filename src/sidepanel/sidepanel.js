@@ -1,7 +1,7 @@
 import { SETTINGS } from '../lib/settings.js';
-import { meetCodeFromUrl } from '../lib/transcript.js';
+import { meetCodeFromUrl, talkShare, header } from '../lib/transcript.js';
 import { videoMs, fmt } from '../lib/clock.js';
-import { ping, PROVIDERS } from '../lib/summary.js';
+import { ping, PROVIDERS, summaryMarkdown, actionItemsMarkdown } from '../lib/summary.js';
 import { captionHealth, speech } from '../lib/health.js';
 
 // Layout: pre-flight checklist (ticket 05, variant B). See docs/DESIGN.md "หน้าตา Side Panel".
@@ -17,6 +17,7 @@ const s = {
   settings: { ...SETTINGS },
   rec: { phase: 'idle' },
   latest: null,
+  catchup: null, // { status, at, result?, kind? } summary of the recording so far
   mic: 'prompt',
   error: null,
   askChatOff: false, // turning the chat notice off needs a second click on a warning
@@ -46,8 +47,9 @@ async function pollPage() {
 async function loadStorage() {
   s.settings = { ...SETTINGS, ...(await chrome.storage.local.get(Object.keys(SETTINGS))) };
   s.latest = (await chrome.storage.local.get('latest')).latest ?? null;
-  const session = await chrome.storage.session.get(['rec', 'startError']);
+  const session = await chrome.storage.session.get(['rec', 'startError', 'catchup']);
   s.rec = session.rec ?? { phase: 'idle' };
+  s.catchup = session.catchup ?? null;
   if (session.startError) s.error = startErrorText(session.startError);
 }
 
@@ -76,6 +78,9 @@ const b = (cls, text, action, arg = '', disabled = false) =>
 const btn = (text, action, arg) => b('btn', esc(text), action, arg);
 const link = (text, action, arg) => b('link', esc(text), action, arg);
 const note = (kind, text, action = '') => `<div class="note ${kind}" role="status"><span>${esc(text)}</span>${action}</div>`;
+const flash = () => (s.flash ? `<p class="hint" role="status">${esc(s.flash)}</p>` : '');
+// Kinds from 0.1.0 have no message now.
+const failText = (kind) => t(chrome.i18n.getMessage(`fail_${kind}`) ? `fail_${kind}` : 'fail_retry', PROVIDERS[s.settings.provider]);
 
 const ICON = {
   ok: '<path d="M6 10.3l2.6 2.6L14 7.6"/>',
@@ -137,14 +142,41 @@ function recordingView() {
       <div class="timer" id="timer">${fmt(videoMs(s.rec.clock, Date.now()))}</div>
       <div class="controls">${paused ? btn(t('resume'), 'resume') : btn(t('pause'), 'pause')}${b('btn primary', esc(t('stop')), 'stop')}</div>
       ${paused ? '' : `<button class="btn mark" data-a="mark">⭐ ${esc(t('markMoment'))}${marks ? ` (${marks})` : ''}</button>`}
-      ${s.flash ? `<p class="hint" role="status">${esc(s.flash)}</p>` : s.shortcuts['mark-moment'] && !paused ? `<p class="hint">${esc(t('shortcutMark', s.shortcuts['mark-moment']))}</p>` : ''}
+      ${s.flash ? flash() : s.shortcuts['mark-moment'] && !paused ? `<p class="hint">${esc(t('shortcutMark', s.shortcuts['mark-moment']))}</p>` : ''}
     </section>
     ${warns}
     <section class="captions"><h2>${t('lastCaptions')}</h2>
       ${lines.length
         ? lines.map((l) => `<div class="line"><time>${fmt(l.t)}</time><div>${l.mark ? `⭐ <b>${esc(l.text)}</b>` : `<b>${esc(l.speaker)}</b> ${esc(l.text)}`}</div></div>`).join('')
         : `<div class="empty">${t('noCaptions')}</div>`}
-    </section>`;
+    </section>
+    ${catchupView()}`;
+}
+
+// Brief, decisions and action items only: the full summary is for after the meeting.
+function catchupView() {
+  const c = s.catchup;
+  const ask = b('btn', esc(t('catchUp')), 'catchUp', '', c?.status === 'running');
+  if (!c) return `<div class="actions">${ask}</div>`;
+  if (c.status === 'running') return note('info', t('catchUpRunning'));
+  if (c.status === 'failed') return `${note('err', failText(c.kind))}<div class="actions">${ask}</div>`;
+  const j = c.result;
+  const list = (items) => `<ul>${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+  return `<section class="latest catchup">
+    <div class="latest-head"><h2>${esc(t('catchUpTitle', fmt(c.at)))}</h2>${link(t('copy'), 'copy', summaryMarkdown(j))}</div>
+    <p>${esc(j.brief)}</p>
+    ${j.decisions.length ? `<h3>${esc(t('decisions'))}</h3>${list(j.decisions)}` : ''}
+    ${j.action_items.length ? `<h3>Action items</h3>${list(j.action_items.map((a) => `${a.task} (${a.owner} · ${a.deadline})`))}` : ''}
+    <div class="actions">${ask}</div>
+  </section>`;
+}
+
+function talkView(lines) {
+  const talk = talkShare(lines);
+  if (talk.length < 2) return '';
+  const pct = (x) => `${Math.round(x.share * 100)}%`;
+  return `<div class="talk"><h3>${esc(t('talkTitle'))}</h3>${talk.map((x) =>
+    `<div class="talk-row"><span class="who">${esc(x.speaker)}</span><span class="bar"><i style="width:${pct(x)}"></i></span><span class="pct">${pct(x)}</span></div>`).join('')}</div>`;
 }
 
 function latestView() {
@@ -156,15 +188,19 @@ function latestView() {
   const status = {
     running: note('info', t('summaryRunning')),
     empty: note('warn', t('summaryEmpty')),
-    failed: note('err', t(chrome.i18n.getMessage(`fail_${sum.kind}`) ? `fail_${sum.kind}` : 'fail_retry', PROVIDERS[s.settings.provider]), // kinds from 0.1.0 have no message now
+    failed: note('err', failText(sum.kind),
       ['nohost', 'nocli', 'auth', 'model'].includes(sum.kind) ? link(t('connect'), 'settings') : ''),
   }[sum.status] ?? '';
   const hasSummary = sum.status === 'done';
+  const result = hasSummary && sum.result; // absent for summaries made before copy existed
   const file = (type, name, there = true) => `<li class="${there ? '' : 'missing'}"><span class="ftype">${type}</span>${name}</li>`;
   return `<section class="latest">
     <div class="latest-head"><h2>${t('latest')} ${esc(l.meetCode)}</h2><span class="dur">${fmt(l.durationMs)}</span></div>
     ${status}
-    <ul class="files">${file('WEBM', 'recording.webm', !!l.videoDownloadId)}${file('MD', 'transcript.md')}${file('MD', 'summary.md', hasSummary)}</ul>
+    <ul class="files">${file('WEBM', 'recording.webm', !!l.videoDownloadId)}${file('HTML', 'review.html', l.reviewDownloadId != null)}${file('MD', 'transcript.md')}${file('MD', 'summary.md', hasSummary)}</ul>
+    ${talkView(l.lines)}
+    ${result ? `<div class="actions">${btn(t('copySummary'), 'copySummary')}${result.action_items.length ? btn(t('copyActions'), 'copyActions') : ''}</div>` : ''}
+    ${flash()}
     ${s.askDelete
       ? `<div class="note err" role="alert"><span>${esc(t('deleteConfirm'))}</span></div>
          <div class="actions">${b('btn danger-fill', esc(t('deleteYes')), 'deleteYes')}${btn(t('cancel'), 'deleteNo')}</div>`
@@ -195,6 +231,9 @@ function settingsView() {
     <label class="field">${t('effortLabel')}
       <select data-setting="aiEffort">${effortOptions()}</select>
       <span class="sub">${t('effortHint')}</span></label>
+    <label class="field">${t('notesLabel')}
+      <textarea data-setting="aiNotes" rows="3" maxlength="1000" placeholder="${esc(t('notesPlaceholder'))}">${esc(st.aiNotes)}</textarea>
+      <span class="sub">${t('notesHint')}</span></label>
     <label class="field">${t('nameLabel')}
       <input data-setting="selfName" value="${esc(st.selfName)}">
       <span class="sub">${t('nameHint')}</span></label>
@@ -243,7 +282,7 @@ function connectView() {
   return `<section class="fields connect"><h2>${t(cliVersion() ? 'howToUse' : 'connectTitle')}</h2>${status}
     <ol class="steps">${steps.map((x) => `<li>${cliVersion() ? esc(x) : x}</li>`).join('')}</ol>
     <div class="actions">${btn(t('testConnection'), 'testHost')}${link(t('guide'), 'guide')}</div>
-    ${s.flash ? `<p class="hint" role="status">${esc(s.flash)}</p>` : ''}</section>`;
+    ${flash()}</section>`;
 }
 
 const chatOffWarning = () => s.askChatOff
@@ -277,6 +316,13 @@ const actions = {
     const res = await sw('summarize');
     if (!res?.ok) s.error = { empty: t('summaryEmpty'), busy: t('err_busy') }[res?.error] ?? t('fail_retry');
   },
+  async catchUp() {
+    s.error = null;
+    const res = await sw('catchup');
+    if (!res?.ok && res?.error === 'empty') s.error = t('summaryEmpty');
+  },
+  copySummary: () => actions.copy(`${header(s.latest)}\n${summaryMarkdown(s.latest.summary.result)}`),
+  copyActions: () => actions.copy(actionItemsMarkdown(s.latest.summary.result)),
   showFiles: () => chrome.downloads.show(s.latest.videoDownloadId),
   deleteAsk() { s.askDelete = true; },
   deleteNo() { s.askDelete = false; },

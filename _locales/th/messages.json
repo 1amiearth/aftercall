@@ -307,5 +307,35 @@
   },
   "fail_model": {
     "message": "สรุปไม่สำเร็จ: $1 ใช้โมเดลนี้ไม่ได้ เช็กชื่อโมเดลในตั้งค่า"
+  },
+  "copySummary": {
+    "message": "คัดลอกสรุป"
+  },
+  "copyActions": {
+    "message": "คัดลอก action items"
+  },
+  "talkTitle": {
+    "message": "ใครพูดเท่าไร (ตามปริมาณข้อความ)"
+  },
+  "catchUp": {
+    "message": "สรุปถึงตอนนี้"
+  },
+  "catchUpRunning": {
+    "message": "กำลังสรุปสิ่งที่คุยไปแล้ว… บันทึกต่อตามปกติ"
+  },
+  "catchUpTitle": {
+    "message": "สรุปถึงนาที $1"
+  },
+  "decisions": {
+    "message": "การตัดสินใจ"
+  },
+  "notesLabel": {
+    "message": "คำสั่งเพิ่มเติมสำหรับสรุป"
+  },
+  "notesHint": {
+    "message": "ส่งไปกับทุกการสรุป ใช้บอกว่าควรเน้นอะไร ไม่เปลี่ยน 6 หัวข้อของสรุป"
+  },
+  "notesPlaceholder": {
+    "message": "เช่น นี่คือ daily standup เน้นงานที่ติดและใครต้องช่วย"
   }
 }

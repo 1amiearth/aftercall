@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseSummary, summarize, summaryMarkdown, ping, SCHEMA } from '../src/lib/summary.js';
+import { parseSummary, summarize, summaryMarkdown, actionItemsMarkdown, ping, SCHEMA, SYSTEM } from '../src/lib/summary.js';
 
 const good = { brief: 'ประชุมวางแผน sprint', topics: ['login'], decisions: [], action_items: [{ task: 'รวม API', owner: 'ปิยะ', deadline: 'ไม่ระบุ', at: '00:52' }], risks: [], follow_up_questions: ['งบ cloud?'] };
 
@@ -23,6 +23,20 @@ test('summarize sends the schema to the host and maps its replies', async () => 
   assert.equal((await summarize({ provider: 'claude', transcript: 't', send: reply({ ok: true, content: 'not json' }) })).kind, 'format');
   const missing = async () => { throw new Error('Specified native messaging host not found.'); };
   assert.equal((await summarize({ provider: 'claude', transcript: 't', send: missing })).kind, 'nohost');
+});
+
+test('recorder notes go after the rules, blank notes change nothing', async () => {
+  let sent;
+  const send = async (msg) => { sent = msg; return { ok: true, content: JSON.stringify(good) }; };
+  await summarize({ provider: 'claude', transcript: 't', notes: '  \n', send });
+  assert.equal(sent.system, SYSTEM);
+  await summarize({ provider: 'claude', transcript: 't', notes: ' focus on budget ', send });
+  assert.ok(sent.system.startsWith(SYSTEM));
+  assert.match(sent.system, /rules above:\nfocus on budget$/);
+});
+
+test('action items as a checklist', () => {
+  assert.equal(actionItemsMarkdown(good), '- [ ] รวม API (ปิยะ · ไม่ระบุ · 00:52)\n');
 });
 
 test('ping is null without the host', async () => {

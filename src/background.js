@@ -3,13 +3,16 @@ import { meetCodeFromUrl, folderName, transcriptMarkdown, speakerName, header } 
 import { summarize, summaryMarkdown, PROVIDERS } from './lib/summary.js';
 import { SETTINGS } from './lib/settings.js';
 import { speech } from './lib/health.js';
+import { reviewHtml } from './lib/review.js';
 
 // State lives in storage so a restarted service worker picks up where it left off.
 //   rec    (storage.session) the recording in progress:
 //          { phase: 'idle'|'recording'|'paused'|'stopping', tabId, meetCode, folder, clock }
 //   latest (storage.local)   the one finished recording kept for "summarize again":
-//          { meetCode, folder, startedAt, durationMs, lines, micOk, videoDownloadId, transcriptDownloadId, summaryDownloadIds,
-//            summary: { status: 'none'|'ready'|'running'|'done'|'failed'|'empty', kind?, message? } }
+//          { meetCode, folder, startedAt, durationMs, lines, micOk, videoDownloadId, transcriptDownloadId, reviewDownloadId, summaryDownloadIds,
+//            summary: { status: 'none'|'ready'|'running'|'done'|'failed'|'empty', kind?, message?, result? } }
+//   catchup (storage.session) a summary of the recording so far, asked for mid-meeting; never written to disk:
+//          { status: 'running'|'done'|'failed', at, result?, kind? }
 // Summaries only run when the user asks: many recordings never need one.
 
 const IDLE = { phase: 'idle' };
@@ -41,6 +44,8 @@ const lines = queue();
 control(async () => {
   const l = await getLatest();
   if (l?.summary?.status === 'running') await setLatest({ ...l, summary: { status: 'failed', kind: 'retry' } });
+  const { catchup } = await chrome.storage.session.get('catchup');
+  if (catchup?.status === 'running') await chrome.storage.session.set({ catchup: { ...catchup, status: 'failed', kind: 'retry' } });
 });
 
 // Same path as the ticket 01 prototype: the icon click opens the panel and grants activeTab,
@@ -72,6 +77,7 @@ chrome.runtime.onMessage.addListener((m, sender, reply) => {
     resume: () => control(resume),
     stop: () => control(stop),
     summarize: () => control(summarizeLatest),
+    catchup: () => control(catchUp),
     'delete-latest': () => control(deleteLatest),
     mark: () => lines(mark),
     utterance: () => lines(() => addLine(tabId, m)),
@@ -123,6 +129,7 @@ async function start(tabId) {
   const now = Date.now();
   const folder = folderName(new Date(now), meetCode);
   await setLatest({ meetCode, folder, startedAt: now, durationMs: 0, lines: [], micOk: res.micOk, summary: { status: 'none' } });
+  await chrome.storage.session.remove('catchup');
   await setRec({ phase: 'recording', tabId, meetCode, folder, clock: startClock(now) });
   toTab(tabId, { type: 'rec:start', chat: s.chat });
   return { ok: true };
@@ -191,8 +198,24 @@ async function stop() {
 
   if (latest.videoDownloadId) await downloadFinished(latest.videoDownloadId);
   await closeOffscreen();
+  await setLatest({ ...latest, reviewDownloadId: await writeReview(latest) });
   await setRec(IDLE);
   return { ok: true };
+}
+
+/**
+ * Writes review.html, replacing the one already in the folder so a new summary does not leave review (1).html behind.
+ * Never throws: the video, transcript and summary matter more than this page.
+ */
+async function writeReview(latest) {
+  try {
+    if (latest.reviewDownloadId != null) await forgetDownload(latest.reviewDownloadId);
+    const [video] = latest.videoDownloadId != null ? await chrome.downloads.search({ id: latest.videoDownloadId }) : [];
+    const html = reviewHtml({ ...latest, video: video?.filename.split(/[\\/]/).pop(), summary: latest.summary?.result });
+    return await downloadText(`${latest.folder}/review.html`, html, 'text/html');
+  } catch {
+    return undefined;
+  }
 }
 
 // ---------- summary ----------
@@ -206,27 +229,50 @@ async function summarizeLatest() {
   return { ok: true };
 }
 
-async function runSummary(latest, s) {
-  // ponytail: pings an extension API so Chrome does not stop the worker during a slow CLI run; connectNative port if this proves flaky.
+// ponytail: pings an extension API so Chrome does not stop the worker during a slow CLI run; connectNative port if this proves flaky.
+async function keepingAlive(fn) {
   const keepAlive = setInterval(() => chrome.runtime.getPlatformInfo(), 20_000);
-  const model = [PROVIDERS[s.provider], s.aiModel, s.aiEffort].filter(Boolean).join(' ');
-  try {
-    const res = await summarize({ provider: s.provider, model: s.aiModel, effort: s.aiEffort, transcript: transcriptMarkdown(latest) });
-    const summaryDownloadId = res.ok ? await downloadText(`${latest.folder}/summary.md`, `${header(latest)}\n${summaryMarkdown(res.summary)}`) : undefined;
-    await updateSummary(latest.folder, res.ok ? { status: 'done', model } : { status: 'failed', kind: res.kind, message: res.message }, summaryDownloadId);
-  } catch (e) {
-    await updateSummary(latest.folder, { status: 'failed', kind: 'retry', message: String(e?.message ?? e) });
-  } finally {
-    clearInterval(keepAlive);
-  }
+  try { return await fn(); } finally { clearInterval(keepAlive); }
 }
 
+const summarizeLines = (rec, s) => summarize({ provider: s.provider, model: s.aiModel, effort: s.aiEffort, notes: s.aiNotes, transcript: transcriptMarkdown(rec) });
+
+const runSummary = (latest, s) => keepingAlive(async () => {
+  const model = [PROVIDERS[s.provider], s.aiModel, s.aiEffort].filter(Boolean).join(' ');
+  try {
+    const res = await summarizeLines(latest, s);
+    if (!res.ok) return await updateSummary(latest.folder, { status: 'failed', kind: res.kind, message: res.message });
+    const summary = { status: 'done', model, result: res.summary };
+    const summaryDownloadId = await downloadText(`${latest.folder}/summary.md`, `${header(latest)}\n${summaryMarkdown(res.summary)}`);
+    const current = await getLatest();
+    const reviewDownloadId = current?.folder === latest.folder ? await writeReview({ ...current, summary }) : undefined;
+    await updateSummary(latest.folder, summary, summaryDownloadId, reviewDownloadId);
+  } catch (e) {
+    await updateSummary(latest.folder, { status: 'failed', kind: 'retry', message: String(e?.message ?? e) });
+  }
+});
+
 // Every "summarize again" adds a summary (1).md, (2).md…; keep all their ids so delete removes them all.
-async function updateSummary(folder, summary, summaryDownloadId) {
+async function updateSummary(folder, summary, summaryDownloadId, reviewDownloadId) {
   const l = await getLatest();
   if (l?.folder !== folder) return;
   const summaryDownloadIds = [...(l.summaryDownloadIds ?? []), ...(summaryDownloadId ? [summaryDownloadId] : [])];
-  await setLatest({ ...l, summary, summaryDownloadIds });
+  await setLatest({ ...l, summary, summaryDownloadIds, ...(reviewDownloadId != null ? { reviewDownloadId } : {}) });
+}
+
+/** Summary of what has been said so far, for someone who joined late or stepped away. Shown in the side panel only. */
+async function catchUp() {
+  const [r, latest, s, { catchup }] = await Promise.all([getRec(), getLatest(), settings(), chrome.storage.session.get('catchup')]);
+  if (!LIVE.includes(r.phase) || latest?.folder !== r.folder || catchup?.status === 'running') return { ok: false, error: 'busy' };
+  if (!speech(latest.lines).length) return { ok: false, error: 'empty' };
+  const at = videoMs(r.clock, Date.now());
+  await chrome.storage.session.set({ catchup: { status: 'running', at } });
+  keepingAlive(async () => { // not awaited: the recording goes on meanwhile
+    const res = await summarizeLines({ ...latest, durationMs: at }, s).catch((e) => ({ ok: false, kind: 'retry', message: String(e) }));
+    if ((await getRec()).folder !== r.folder) return; // stopped and started another recording meanwhile
+    await chrome.storage.session.set({ catchup: res.ok ? { status: 'done', at, result: res.summary } : { status: 'failed', at, kind: res.kind } });
+  });
+  return { ok: true };
 }
 
 // ---------- delete ----------
@@ -237,10 +283,8 @@ async function deleteLatest() {
   if (!latest) return { ok: true };
   if ([...LIVE, 'stopping'].includes(r.phase) || latest.summary?.status === 'running') return { ok: false, error: 'busy' };
   // summaryDownloadId: single id stored by 0.1.0 before summaryDownloadIds
-  for (const id of [latest.videoDownloadId, latest.transcriptDownloadId, latest.summaryDownloadId, ...(latest.summaryDownloadIds ?? [])]) {
-    if (id == null) continue;
-    await chrome.downloads.removeFile(id).catch(() => {}); // already moved or deleted by the user
-    await chrome.downloads.erase({ id });
+  for (const id of [latest.videoDownloadId, latest.transcriptDownloadId, latest.reviewDownloadId, latest.summaryDownloadId, ...(latest.summaryDownloadIds ?? [])]) {
+    if (id != null) await forgetDownload(id);
   }
   await chrome.storage.local.remove('latest');
   return { ok: true };
@@ -248,8 +292,21 @@ async function deleteLatest() {
 
 // ---------- downloads & offscreen ----------
 
-const downloadText = (filename, text) =>
-  chrome.downloads.download({ url: `data:text/markdown;charset=utf-8,${encodeURIComponent(text)}`, filename, conflictAction: 'uniquify' });
+// Base64, not percent-encoding: Thai text grows 9x percent-encoded and a long meeting could pass Chrome's 2 MB URL limit.
+function base64(text) {
+  const bytes = new TextEncoder().encode(text);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+const downloadText = (filename, text, type = 'text/markdown') =>
+  chrome.downloads.download({ url: `data:${type};charset=utf-8;base64,${base64(text)}`, filename, conflictAction: 'uniquify' });
+
+async function forgetDownload(id) {
+  await chrome.downloads.removeFile(id).catch(() => {}); // already moved or deleted by the user
+  await chrome.downloads.erase({ id });
+}
 
 function downloadFinished(id) {
   return new Promise((resolve) => {

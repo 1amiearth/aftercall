@@ -27,10 +27,33 @@ export const header = ({ meetCode, startedAt, durationMs }) => {
 };
 
 /**
+ * Each speaker's share of what was said, largest first. ⭐ marks do not count.
+ * ponytail: shares by characters, not seconds, because utterances only carry a start time; add an end time in utterance.js if this misleads.
+ * @returns {{ speaker: string, share: number, turns: number }[]}
+ */
+export function talkShare(lines) {
+  const by = new Map();
+  for (const l of lines) {
+    if (l.mark) continue;
+    const x = by.get(l.speaker) ?? { speaker: l.speaker, chars: 0, turns: 0 };
+    x.chars += l.text.length;
+    x.turns++;
+    by.set(l.speaker, x);
+  }
+  const total = [...by.values()].reduce((n, x) => n + x.chars, 0);
+  return [...by.values()].map(({ speaker, chars, turns }) => ({ speaker, share: total ? chars / total : 0, turns })).sort((a, b) => b.share - a.share);
+}
+
+const pct = (share) => `${Math.round(share * 100)}%`;
+
+/**
  * @param {{ meetCode: string, startedAt: number, durationMs: number, lines: { t: number, speaker: string, text: string }[] }} rec
  */
-export const transcriptMarkdown = (rec) =>
-  `${header(rec)}\n${[...rec.lines].sort((a, b) => a.t - b.t).map(line).join('\n')}\n`;
+export function transcriptMarkdown(rec) {
+  const talk = talkShare(rec.lines);
+  const speakers = talk.length ? `Speakers: ${talk.map((x) => `${x.speaker} ${pct(x.share)}`).join(' · ')}\n` : '';
+  return `${header(rec)}${speakers}\n${[...rec.lines].sort((a, b) => a.t - b.t).map(line).join('\n')}\n`;
+}
 
 /** A caption line, or a ⭐ mark the recorder added. */
 const line = (l) => (l.mark ? `[${fmt(l.t)}] ⭐ **${l.text}**` : `[${fmt(l.t)}] **${l.speaker}:** ${l.text}`);
