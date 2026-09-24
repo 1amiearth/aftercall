@@ -8,7 +8,7 @@ import { speech } from './lib/health.js';
 //   rec    (storage.session) the recording in progress:
 //          { phase: 'idle'|'recording'|'paused'|'stopping', tabId, meetCode, folder, clock }
 //   latest (storage.local)   the one finished recording kept for "summarize again":
-//          { meetCode, folder, startedAt, durationMs, lines, micOk, videoDownloadId, transcriptDownloadId, summaryDownloadId,
+//          { meetCode, folder, startedAt, durationMs, lines, micOk, videoDownloadId, transcriptDownloadId, summaryDownloadIds,
 //            summary: { status: 'none'|'ready'|'running'|'done'|'failed'|'empty', kind?, message? } }
 // Summaries only run when the user asks: many recordings never need one.
 
@@ -35,6 +35,13 @@ const settings = async () => ({ ...SETTINGS, ...(await chrome.storage.local.get(
 const queue = () => { let q = Promise.resolve(); return (fn) => (q = q.then(fn, fn)); };
 const control = queue();
 const lines = queue();
+
+// A summary runs inside this worker, so a freshly started worker has none in flight.
+// One left 'running' (browser closed or extension updated mid-summary) would block summarize and delete forever.
+control(async () => {
+  const l = await getLatest();
+  if (l?.summary?.status === 'running') await setLatest({ ...l, summary: { status: 'failed', kind: 'retry' } });
+});
 
 // Same path as the ticket 01 prototype: the icon click opens the panel and grants activeTab,
 // which tabCapture.getMediaStreamId needs when Start is pressed later.
@@ -212,10 +219,12 @@ async function runSummary(latest, s) {
   }
 }
 
+// Every "summarize again" adds a summary (1).md, (2).md…; keep all their ids so delete removes them all.
 async function updateSummary(folder, summary, summaryDownloadId) {
   const l = await getLatest();
   if (l?.folder !== folder) return;
-  await setLatest({ ...l, summary, ...(summaryDownloadId ? { summaryDownloadId } : {}) });
+  const summaryDownloadIds = [...(l.summaryDownloadIds ?? []), ...(summaryDownloadId ? [summaryDownloadId] : [])];
+  await setLatest({ ...l, summary, summaryDownloadIds });
 }
 
 // ---------- delete ----------
@@ -225,7 +234,8 @@ async function deleteLatest() {
   const [r, latest] = await Promise.all([getRec(), getLatest()]);
   if (!latest) return { ok: true };
   if ([...LIVE, 'stopping'].includes(r.phase) || latest.summary?.status === 'running') return { ok: false, error: 'busy' };
-  for (const id of [latest.videoDownloadId, latest.transcriptDownloadId, latest.summaryDownloadId]) {
+  // summaryDownloadId: single id stored by 0.1.0 before summaryDownloadIds
+  for (const id of [latest.videoDownloadId, latest.transcriptDownloadId, latest.summaryDownloadId, ...(latest.summaryDownloadIds ?? [])]) {
     if (id == null) continue;
     await chrome.downloads.removeFile(id).catch(() => {}); // already moved or deleted by the user
     await chrome.downloads.erase({ id });
