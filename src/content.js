@@ -1,5 +1,5 @@
-// Runs on meet.google.com: reads live captions, posts the chat notice, notices leaving the call.
-// Every Meet selector lives in MEET. When Google changes the page, fix it there.
+// Runs on Google Meet and Microsoft Teams (web): reads live captions, posts the chat notice, notices leaving the call.
+// Every page selector lives in the meet and teams tables. When Google or Microsoft changes the page, fix it there.
 (async () => {
   const { createUtteranceTracker } = await import(chrome.runtime.getURL('src/lib/utterance.js'));
 
@@ -8,12 +8,16 @@
 
   // Chat, leave and CC-button labels were seen in the ticket 02 probe (English UI); Thai labels are guesses.
   // ponytail: caption structure (one child per bubble, speaker first) is unconfirmed until a ticket 02 export with captions.
-  const MEET = {
+  const meet = {
     captionRegion: () => [...document.querySelectorAll('[role="region"][aria-label]')].find((n) => /caption|คำบรรยาย/i.test(label(n))),
     captionsOnButton: () => button(/turn off captions|ปิดคำบรรยาย/i),
     leaveButton: () => button(/leave call|ออกจากการโทร|ออกจากสาย|วางสาย/i),
     chatButton: () => button(/chat with everyone|แชทกับทุกคน/i),
     chatBox: () => document.querySelector('textarea[aria-label]'),
+    write(box, text) {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(box, text);
+      box.dispatchEvent(new Event('input', { bubbles: true }));
+    },
     sendButton(box) {
       for (let a = box.parentElement; a; a = a.parentElement) {
         const b = [...a.querySelectorAll('button[aria-label]')].find((x) => x.getAttribute('role') !== 'switch' && /send|ส่ง/i.test(label(x)));
@@ -21,7 +25,35 @@
       }
       return null;
     },
+    /** One block per caption bubble: first text is the speaker, the rest is what they said. */
+    readBlocks: (region) =>
+      [...region.children]
+        .map((el) => { const t = textLeaves(el); return { key: el, speaker: t[0] ?? '', text: t.slice(1).join(' ') }; })
+        .filter((b) => b.speaker && b.text),
   };
+
+  // From a probe of the browser join page (light-meetings) in English, 2026-10: data-tid attributes do not change with the UI language.
+  // ponytail: Leave and Chat have no data-tid there, so they go by label; the Thai labels are guesses.
+  const teams = {
+    captionRegion: () => document.querySelector('[data-tid="closed-caption-renderer-wrapper"]'),
+    captionsOnButton: () => document.querySelector('[data-tid="closed-captions-turn-off-button"]'),
+    leaveButton: () => document.querySelector('#hangup-button, [data-tid="hangup-main-btn"]')
+      ?? [...document.querySelectorAll('button')].find((b) => /^(leave|ออก)/i.test(label(b) || b.textContent.trim())),
+    chatButton: () => button(/^(chat|แชท)$/i),
+    chatBox: () => document.querySelector('[data-tid="ckeditor"]'),
+    write(box, text) {
+      box.focus();
+      document.execCommand('insertText', false, text); // CKEditor takes typed input, not a value
+    },
+    sendButton: () => document.querySelector('[data-tid="newMessageCommands-send"]'),
+    // Each bubble keeps its caption-text node while Teams rewrites the words, so that node is the bubble's identity.
+    readBlocks: (region) =>
+      [...region.querySelectorAll('[data-tid="closed-caption-text"]')]
+        .map((el) => ({ key: el, speaker: el.closest('.fui-ChatMessageCompact')?.querySelector('[data-tid="author"]')?.textContent.trim() ?? '', text: el.textContent.trim() }))
+        .filter((b) => b.speaker && b.text),
+  };
+
+  const SITE = location.hostname === 'teams.microsoft.com' ? teams : meet;
 
   const NOTICE = '🔴 AfterCall กำลังบันทึกการประชุมนี้และจะสรุปด้วย AI · AfterCall is recording this meeting and will summarize it with AI';
 
@@ -35,14 +67,8 @@
     return out;
   }
 
-  /** One block per caption bubble: first text is the speaker, the rest is what they said. */
-  const readBlocks = (region) =>
-    [...region.children]
-      .map((el) => { const t = textLeaves(el); return { key: el, speaker: t[0] ?? '', text: t.slice(1).join(' ') }; })
-      .filter((b) => b.speaker && b.text);
-
   let tracker = null, region = null, observer = null, paused = false, wasInCall = false;
-  const read = () => tracker && !paused && region && tracker.update(readBlocks(region));
+  const read = () => tracker && !paused && region && tracker.update(SITE.readBlocks(region));
 
   function startCapture(isPaused = false) {
     tracker = createUtteranceTracker({ emit: (u) => send({ type: 'utterance', ...u }) });
@@ -58,7 +84,7 @@
 
   setInterval(() => {
     if (tracker) {
-      const r = MEET.captionRegion() ?? null;
+      const r = SITE.captionRegion() ?? null;
       if (r !== region) {
         observer?.disconnect();
         observer = null;
@@ -73,27 +99,26 @@
       }
       if (!paused) tracker.tick();
     }
-    const inCall = !!MEET.leaveButton();
+    const inCall = !!SITE.leaveButton();
     if (tracker && wasInCall && !inCall) send({ type: 'left-meeting' });
     wasInCall = inCall;
   }, 250);
 
   async function postNotice() {
-    let box = MEET.chatBox();
+    let box = SITE.chatBox();
     const opened = !box;
     if (opened) {
-      MEET.chatButton()?.click();
-      for (let i = 0; i < 30 && !(box = MEET.chatBox()); i++) await sleep(100);
+      SITE.chatButton()?.click();
+      for (let i = 0; i < 30 && !(box = SITE.chatBox()); i++) await sleep(100);
     }
     if (!box) return;
     box.focus();
-    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(box, NOTICE);
-    box.dispatchEvent(new Event('input', { bubbles: true }));
+    SITE.write(box, NOTICE);
     await sleep(200);
-    const btn = MEET.sendButton(box);
+    const btn = SITE.sendButton(box);
     if (btn && !btn.disabled) btn.click();
     else box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
-    if (opened) { await sleep(500); MEET.chatButton()?.click(); } // put the chat panel back the way it was
+    if (opened) { await sleep(500); SITE.chatButton()?.click(); } // put the chat panel back the way it was
   }
 
   chrome.runtime.onMessage.addListener((m, _sender, reply) => {
@@ -102,12 +127,12 @@
     if (m.type === 'rec:resume') paused = false;
     if (m.type === 'rec:stop') stopCapture(); // flushes the last lines before we reply
     if (m.type === 'status') {
-      const r = MEET.captionRegion();
+      const r = SITE.captionRegion();
       return reply({
-        cc: !!r || !!MEET.captionsOnButton(),
-        inCall: !!MEET.leaveButton(),
+        cc: !!r || !!SITE.captionsOnButton(),
+        inCall: !!SITE.leaveButton(),
         seen: !!r?.innerText.trim(), // captions on screen…
-        parsed: r ? readBlocks(r).length : 0, // …and how many bubbles we could read
+        parsed: r ? SITE.readBlocks(r).length : 0, // …and how many bubbles we could read
       });
     }
     reply({ ok: true });

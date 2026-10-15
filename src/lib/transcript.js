@@ -3,10 +3,26 @@ import { fmt } from './clock.js';
 // ponytail: "You"/"คุณ" is what Meet is assumed to show for your own captions; confirm with ticket 02 export.
 const SELF_LABEL = /^(you|คุณ)$/i;
 
-/** Meet room code from a tab URL, or null. @param {string | undefined} url */
+export const isTeamsUrl = (url) => /^https:\/\/teams\.microsoft\.com\//.test(url ?? '');
+
+/**
+ * Meeting code from a tab URL, or null: a Meet room code ("abc-defg-hij") or "teams-" plus the Teams meeting ID.
+ * @param {string | undefined} url
+ */
 export function meetCodeFromUrl(url) {
-  return url?.match(/^https:\/\/meet\.google\.com\/([a-z]{3,4}-[a-z]{4}-[a-z]{3,4})(?:[/?#]|$)/)?.[1] ?? null;
+  const meet = url?.match(/^https:\/\/meet\.google\.com\/([a-z]{3,4}-[a-z]{4}-[a-z]{3,4})(?:[/?#]|$)/)?.[1];
+  if (meet) return meet;
+  if (!isTeamsUrl(url)) return null;
+  // The browser join page (light-meetings/launch) carries the meeting as base64 JSON in ?coords=.
+  let code = null;
+  try { code = JSON.parse(atob(new URL(url).searchParams.get('coords'))).meetingCode; } catch {}
+  // Otherwise a /meet/<id> link, or a meetup-join link: its thread ID is long, the first 12 characters tell meetings apart.
+  code = /^\d+$/.test(code) ? code : url.match(/\/meet\/(\d+)/)?.[1] ?? url.match(/19(?::|%3A)meeting_([A-Za-z0-9]{12})/i)?.[1];
+  return code ? `teams-${code}` : null;
 }
+
+/** "Meet abc-defg-hij" or "Teams 439031496660244". */
+export const meetingTitle = (code) => (code.startsWith('teams-') ? `Teams ${code.slice(6)}` : `Meet ${code}`);
 
 /** Replace Meet's label for yourself with the recorder's name. */
 export const speakerName = (speaker, selfName) =>
@@ -21,7 +37,7 @@ export const folderName = (date, meetCode) =>
   `AfterCall/${localDate(date)}_${localTime(date).replace(':', '')}_${meetCode}`;
 
 /** Header shared by transcript.md and summary.md. */
-export const header = (rec) => `# Meet ${rec.meetCode}\n${when(rec)}\n`;
+export const header = (rec) => `# ${meetingTitle(rec.meetCode)}\n${when(rec)}\n`;
 
 /** "2026-09-24 14:30 · 52:10": start and length of a recording. */
 export const when = ({ startedAt, durationMs }) => {

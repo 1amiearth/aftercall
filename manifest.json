@@ -21,7 +21,8 @@
     "nativeMessaging"
   ],
   "host_permissions": [
-    "https://meet.google.com/*"
+    "https://meet.google.com/*",
+    "https://teams.microsoft.com/*"
   ],
   "background": {
     "service_worker": "src/background.js",
@@ -40,7 +41,8 @@
   "content_scripts": [
     {
       "matches": [
-        "https://meet.google.com/*"
+        "https://meet.google.com/*",
+    "https://teams.microsoft.com/*"
       ],
       "js": [
         "src/content.js"
@@ -54,7 +56,8 @@
         "src/lib/utterance.js"
       ],
       "matches": [
-        "https://meet.google.com/*"
+        "https://meet.google.com/*",
+    "https://teams.microsoft.com/*"
       ]
     }
   ],

@@ -3,19 +3,19 @@
     "message": "AfterCall"
   },
   "extDescription": {
-    "message": "Record Google Meet, turn live captions into a transcript, and summarize it with AI."
+    "message": "Record Google Meet or Microsoft Teams, turn live captions into a transcript, and summarize it with AI."
   },
   "checklist": {
     "message": "Before you start"
   },
   "meetTab": {
-    "message": "Google Meet tab"
+    "message": "Meeting tab"
   },
   "meetTabNone": {
-    "message": "Open a Google Meet call in this tab"
+    "message": "Open a Google Meet or Teams call in this tab"
   },
   "meetReload": {
-    "message": "Reload this Meet tab once so AfterCall can read captions"
+    "message": "Reload this meeting tab once so AfterCall can read captions"
   },
   "cc": {
     "message": "Live captions (CC)"
@@ -24,7 +24,7 @@
     "message": "On. Check the caption language matches the meeting"
   },
   "ccOff": {
-    "message": "Off. Press c in Meet, or there will be no transcript"
+    "message": "Off. Turn on captions (Meet: press c. Teams: More > Language and speech), or there will be no transcript"
   },
   "selfName": {
     "message": "Your name"
@@ -57,7 +57,7 @@
     "message": "Turn off"
   },
   "chat": {
-    "message": "Announce in Meet chat"
+    "message": "Announce in meeting chat"
   },
   "chatOn": {
     "message": "People in the call see that you are recording"
@@ -87,7 +87,7 @@
     "message": "Saving files…"
   },
   "ccOffWarn": {
-    "message": "Captions are off, so nothing is being transcribed. Press c in Meet."
+    "message": "Captions are off, so nothing is being transcribed. Turn on captions in the call."
   },
   "micFailedWarn": {
     "message": "The microphone was not allowed, so your voice is not in this recording."
@@ -141,13 +141,13 @@
     "message": "Include my microphone"
   },
   "chatLabel": {
-    "message": "Announce in Meet chat when recording starts"
+    "message": "Announce in meeting chat when recording starts"
   },
   "chatConfirm": {
     "message": "Turn off the announcement? People in the call will not know they are being recorded, which may break privacy law (PDPA) or company policy."
   },
   "err_notmeet": {
-    "message": "This tab is not a Google Meet call"
+    "message": "This tab is not a Google Meet or Teams call"
   },
   "err_busy": {
     "message": "Already recording"
@@ -174,13 +174,13 @@
     "message": "Keep on"
   },
   "err_invoke": {
-    "message": "Click the AfterCall icon in the toolbar while on this Meet tab, then press Start again"
+    "message": "Click the AfterCall icon in the toolbar while on this meeting tab, then press Start again"
   },
   "readyCount": {
     "message": "$1 of $2 ready"
   },
   "noMeeting": {
-    "message": "Not in a Meet call"
+    "message": "Not in a meeting"
   },
   "summarize": {
     "message": "Summarize with AI"
@@ -219,10 +219,10 @@
     "message": "Press $1 to mark without opening this panel"
   },
   "capUnreadable": {
-    "message": "Captions are on screen but AfterCall cannot read them, so the transcript is empty. The video is still recording. Reload the Meet tab, or report it on GitHub."
+    "message": "Captions are on screen but AfterCall cannot read them, so the transcript is empty. The video is still recording. Reload the meeting tab, or report it on GitHub."
   },
   "capQuiet": {
-    "message": "No captions for 2 minutes. If people are talking, press c twice in Meet to restart captions."
+    "message": "No captions for 2 minutes. If people are talking, turn captions off and on again."
   },
   "ai": {
     "message": "AI for summaries"
@@ -285,7 +285,7 @@
     "message": "Press \"Test connection\" below"
   },
   "use1": {
-    "message": "In a Meet call, turn on CC and press Start"
+    "message": "In a Meet or Teams call, turn on captions and press Start"
   },
   "use2": {
     "message": "Press Stop when the meeting ends. The video and transcript are saved"

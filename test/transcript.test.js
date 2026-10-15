@@ -21,6 +21,15 @@ test('meet code from URL', () => {
   assert.equal(meetCodeFromUrl(undefined), null);
 });
 
+test('meetCodeFromUrl reads Teams meeting IDs', () => {
+  const coords = encodeURIComponent(btoa(JSON.stringify({ meetingUrl: 'https://teams.microsoft.com/meet/439031496660244?p=x', meetingCode: '439031496660244' })));
+  assert.equal(meetCodeFromUrl(`https://teams.microsoft.com/light-meetings/launch?p=x&anon=true&coords=${coords}`), 'teams-439031496660244');
+  assert.equal(meetCodeFromUrl('https://teams.microsoft.com/meet/439031496660244?p=x'), 'teams-439031496660244');
+  assert.equal(meetCodeFromUrl('https://teams.microsoft.com/l/meetup-join/19%3ameeting_MjA4NzE2YTktYjQ4@thread.v2/0'), 'teams-MjA4NzE2YTkt');
+  assert.equal(meetCodeFromUrl('https://teams.microsoft.com/v2/'), null);
+  assert.equal(meetCodeFromUrl('https://evil.com/?u=https://teams.microsoft.com/meet/123'), null);
+});
+
 test('own caption label becomes the recorder name only when set', () => {
   assert.equal(speakerName('You', 'Earth'), 'Earth');
   assert.equal(speakerName('คุณ', 'Earth'), 'Earth');

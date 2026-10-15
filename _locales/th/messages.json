@@ -3,19 +3,19 @@
     "message": "AfterCall"
   },
   "extDescription": {
-    "message": "บันทึก Google Meet เก็บ caption เป็น transcript แล้วสรุปด้วย AI"
+    "message": "บันทึก Google Meet หรือ Microsoft Teams เก็บ caption เป็น transcript แล้วสรุปด้วย AI"
   },
   "checklist": {
     "message": "ก่อนเริ่ม"
   },
   "meetTab": {
-    "message": "แท็บ Google Meet"
+    "message": "แท็บประชุม"
   },
   "meetTabNone": {
-    "message": "เปิดห้อง Google Meet ในแท็บนี้ก่อน"
+    "message": "เปิดห้อง Google Meet หรือ Teams ในแท็บนี้ก่อน"
   },
   "meetReload": {
-    "message": "รีโหลดแท็บ Meet นี้หนึ่งครั้ง AfterCall ถึงจะอ่าน caption ได้"
+    "message": "รีโหลดแท็บประชุมนี้หนึ่งครั้ง AfterCall ถึงจะอ่าน caption ได้"
   },
   "cc": {
     "message": "Live captions (CC)"
@@ -24,7 +24,7 @@
     "message": "เปิดอยู่ เช็กภาษา caption ให้ตรงกับภาษาที่คุย"
   },
   "ccOff": {
-    "message": "ปิดอยู่ กด c ใน Meet ไม่อย่างนั้นจะไม่มี transcript"
+    "message": "ปิดอยู่ เปิด caption ก่อน (Meet: กด c, Teams: More > Language and speech) ไม่อย่างนั้นจะไม่มี transcript"
   },
   "selfName": {
     "message": "ชื่อของคุณ"
@@ -57,7 +57,7 @@
     "message": "ปิด"
   },
   "chat": {
-    "message": "แจ้งในแชท Meet"
+    "message": "แจ้งในแชทประชุม"
   },
   "chatOn": {
     "message": "คนในห้องจะเห็นว่ากำลังบันทึก"
@@ -87,7 +87,7 @@
     "message": "กำลังเซฟไฟล์…"
   },
   "ccOffWarn": {
-    "message": "CC ปิดอยู่ ไม่มีข้อความถูกเก็บ กด c ใน Meet"
+    "message": "CC ปิดอยู่ ไม่มีข้อความถูกเก็บ เปิด caption ในห้องประชุม"
   },
   "micFailedWarn": {
     "message": "ไมค์ยังไม่ได้อนุญาต ไฟล์นี้จะไม่มีเสียงของคุณ"
@@ -141,13 +141,13 @@
     "message": "ผสมเสียงไมค์ของฉัน"
   },
   "chatLabel": {
-    "message": "แจ้งในแชท Meet ตอนเริ่มบันทึก"
+    "message": "แจ้งในแชทประชุมตอนเริ่มบันทึก"
   },
   "chatConfirm": {
     "message": "ปิดการแจ้งในแชท? คนในห้องจะไม่รู้ว่ากำลังถูกบันทึก ซึ่งอาจขัด PDPA หรือนโยบายองค์กร"
   },
   "err_notmeet": {
-    "message": "แท็บนี้ไม่ใช่ห้อง Google Meet"
+    "message": "แท็บนี้ไม่ใช่ห้อง Google Meet หรือ Teams"
   },
   "err_busy": {
     "message": "กำลังบันทึกอยู่แล้ว"
@@ -174,13 +174,13 @@
     "message": "เปิดไว้"
   },
   "err_invoke": {
-    "message": "กดไอคอน AfterCall บนแถบเครื่องมือตอนอยู่ในแท็บ Meet นี้ แล้วกดเริ่มบันทึกอีกครั้ง"
+    "message": "กดไอคอน AfterCall บนแถบเครื่องมือตอนอยู่ในแท็บประชุมนี้ แล้วกดเริ่มบันทึกอีกครั้ง"
   },
   "readyCount": {
     "message": "พร้อม $1 จาก $2"
   },
   "noMeeting": {
-    "message": "ยังไม่ได้อยู่ในห้อง Meet"
+    "message": "ยังไม่ได้อยู่ในห้องประชุม"
   },
   "summarize": {
     "message": "สรุปด้วย AI"
@@ -219,10 +219,10 @@
     "message": "กด $1 เพื่อปักหมุดโดยไม่ต้องเปิดแผงนี้"
   },
   "capUnreadable": {
-    "message": "caption ขึ้นในหน้า Meet แต่ AfterCall อ่านไม่ออก transcript จึงว่าง วิดีโอยังบันทึกอยู่ ลองรีโหลดแท็บ Meet หรือแจ้งใน GitHub"
+    "message": "caption ขึ้นในหน้าประชุม แต่ AfterCall อ่านไม่ออก transcript จึงว่าง วิดีโอยังบันทึกอยู่ ลองรีโหลดแท็บประชุม หรือแจ้งใน GitHub"
   },
   "capQuiet": {
-    "message": "ไม่มีข้อความจาก caption มา 2 นาทีแล้ว ถ้ามีคนพูดอยู่ ให้กด c สองครั้งใน Meet เพื่อเปิด CC ใหม่"
+    "message": "ไม่มีข้อความจาก caption มา 2 นาทีแล้ว ถ้ามีคนพูดอยู่ ให้ปิดแล้วเปิด caption ใหม่"
   },
   "ai": {
     "message": "AI สำหรับสรุป"
@@ -285,7 +285,7 @@
     "message": "กด \"ทดสอบการเชื่อมต่อ\" ด้านล่าง"
   },
   "use1": {
-    "message": "ในห้อง Meet เปิด CC แล้วกดเริ่มบันทึก"
+    "message": "ในห้อง Meet หรือ Teams เปิด caption แล้วกดเริ่มบันทึก"
   },
   "use2": {
     "message": "จบประชุมกดหยุด ไฟล์วิดีโอกับ transcript จะถูกเซฟ"
