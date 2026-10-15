@@ -86,7 +86,7 @@ export function anonymize(html, names) {
   return html;
 }
 
-const REGION_MAX = 1_000_000; // characters; the file goes through a data: URL
+const REGION_MAX = 300_000; // characters; the file goes through a data: URL, ~2 MB at most
 
 /**
  * What the side panel's "Capture page" saves. Runs in the content script (needs a DOM).
@@ -94,6 +94,7 @@ const REGION_MAX = 1_000_000; // characters; the file goes through a data: URL
  * @param {{ doc: Document, site: string, region: Element | null, blocks: { speaker: string }[], found: object }} p
  */
 export function capturePage({ doc, site, region, blocks, found }) {
+  const names = blocks.map((b) => b.speaker);
   let regionHtml = '';
   if (region) {
     const copy = region.cloneNode(true);
@@ -104,11 +105,11 @@ export function capturePage({ doc, site, region, blocks, found }) {
         if (['src', 'srcset', 'style'].includes(a.name) || a.name.startsWith('on')) el.removeAttribute(a.name);
       }
     }
-    regionHtml = anonymize(copy.outerHTML, blocks.map((b) => b.speaker)).slice(0, REGION_MAX);
+    regionHtml = anonymize(copy.outerHTML, names).slice(0, REGION_MAX);
   }
-  const short = (el) => (el.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 40);
+  const short = (el) => anonymize((el.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 40), names);
   const attrs = (el) => Object.fromEntries(['id', 'data-tid', 'jsname', 'role', 'aria-label', 'aria-pressed', 'type']
-    .map((a) => [a, el.getAttribute(a)]).filter(([, v]) => v != null));
+    .map((a) => [a, el.getAttribute(a)]).filter(([, v]) => v != null).map(([a, v]) => [a, anonymize(v, names)])); // "Pin Ann Lee"
   return {
     site,
     url: doc.location.origin + doc.location.pathname,

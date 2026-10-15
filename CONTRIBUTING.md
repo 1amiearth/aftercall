@@ -6,7 +6,7 @@
 
 1. Fork แล้ว clone repo
 2. โหลดส่วนขยายแบบ unpacked ตาม [README](README.md#ติดตั้งจากซอร์ส)
-3. แก้โค้ดแล้วกดรีโหลดในหน้า `chrome://extensions` แท็บ Meet ต้องรีโหลดด้วยถ้าแก้ content script
+3. แก้โค้ดแล้วกดรีโหลดในหน้า `chrome://extensions` แท็บประชุมที่เปิดอยู่จะได้ content script ใหม่เองตอนรีโหลด
 4. ดู log ของแต่ละส่วน
    - Service worker: ลิงก์ **service worker** ในการ์ดของ AfterCall
    - Offscreen และ Side Panel: `chrome://inspect/#other`

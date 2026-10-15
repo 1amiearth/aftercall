@@ -31,7 +31,7 @@
 
 ## หลักการอัดภาพ
 
-ค่าเริ่มต้นคืออัด **แท็บ `meet.google.com`** ด้วย `chrome.tabCapture` + Offscreen Document + `MediaRecorder`
+ค่าเริ่มต้นคืออัด **แท็บประชุม (`meet.google.com` หรือ Teams บนเว็บ)** ด้วย `chrome.tabCapture` + Offscreen Document + `MediaRecorder`
 
 Google Meet รวมภาพที่กำลังนำเสนอเข้ามาในหน้าห้องอยู่แล้ว จึงอัดแท็บห้องได้ทั้งคนและสไลด์ในไฟล์เดียว
 
@@ -82,7 +82,7 @@ Service worker      ตรวจแท็บ Meet, ขอ stream id, สั่�
 - `manifest_version: 3`
 - `side_panel` ชี้ไปที่หน้า Side Panel
 - `background.service_worker`
-- content script ที่ `matches: ["https://meet.google.com/*"]`
+- content script ที่ `matches`: `meet.google.com`, `teams.microsoft.com`, `teams.live.com`, `teams.cloud.microsoft`
 - offscreen document สร้างตอนเริ่มอัด ปิดตอน Stop
 
 เทคโนโลยี
@@ -141,12 +141,13 @@ Service worker      ตรวจแท็บ Meet, ขอ stream id, สั่�
 | สิทธิ์ | ใช้ทำอะไร |
 |---|---|
 | `sidePanel` | แผงควบคุมบันทึก |
-| `tabCapture` | ขอ media stream ของแท็บ Meet |
+| `tabCapture` | ขอ media stream ของแท็บประชุม |
 | `offscreen` | ถือ recorder นอก service worker |
-| `activeTab` | รู้ว่าแท็บที่เปิดแผงอยู่คือ Meet |
+| `activeTab` | รู้ว่าแท็บที่เปิดแผงอยู่คือห้องประชุม |
+| `scripting` | ใส่ content script ให้แท็บประชุมที่เปิดค้างอยู่ตอนติดตั้งหรืออัปเดตส่วนขยาย |
 | `storage` | จำสวิตช์ไมค์, การแจ้งแชท, AI และโมเดลที่เลือก ในเครื่อง |
 | `downloads` | เซฟ `.webm`, `.md` ลงเครื่อง |
-| host `https://meet.google.com/*` | content script อ่าน captions และส่งแชท |
+| host `https://meet.google.com/*`, `https://teams.microsoft.com/*`, `https://teams.live.com/*`, `https://teams.cloud.microsoft/*` | content script อ่าน captions และส่งแชท |
 | `nativeMessaging` | เรียก Claude Code หรือ Codex ในเครื่องผ่าน `native/host.js` เพื่อสรุป |
 
 ไมค์ไม่ใส่เป็น permission ใน manifest แต่ Offscreen ไม่มีหน้าจอ จึงเด้งขอสิทธิ์ไมค์เองไม่ได้ ครั้งแรกที่ผู้ใช้เปิดสวิตช์ไมค์ ให้เปิดหน้าส่วนขยายที่มองเห็นได้ (เช่น แท็บ `permissions.html`) เรียก `getUserMedia({ audio: true })` ให้ผู้ใช้กดอนุญาต จากนั้น Offscreen ใช้สิทธิ์เดียวกันได้เพราะอยู่ origin ของส่วนขยายเดียวกัน
@@ -218,7 +219,7 @@ Side Panel มีปุ่ม **สรุปใหม่** ที่เอา tr
 
 ## ลำดับตอนกดบันทึก
 
-1. Side Panel ตรวจว่าแท็บปัจจุบันเป็น `meet.google.com` ถ้าไม่ใช่ ปุ่ม Start ใช้ไม่ได้
+1. Side Panel ตรวจว่าแท็บปัจจุบันเป็นห้อง Meet หรือหน้า Teams ถ้าไม่ใช่ ปุ่ม Start ใช้ไม่ได้
 2. ผู้ใช้กด Start (ต้องเป็นท่าทางของผู้ใช้ Chrome ถึงจะให้จับแท็บและไมค์)
 3. Service worker เรียก `chrome.tabCapture.getMediaStreamId` ของแท็บนั้น แล้วเปิด Offscreen
 4. Offscreen เอา stream id ไป `getUserMedia` ด้วย `chromeMediaSource: "tab"` ทั้งภาพและเสียง กำหนด `maxWidth: 1920`, `maxHeight: 1080`, `maxFrameRate: 15` ใน `mandatory` ไม่อย่างนั้นอาจได้ภาพความละเอียดต่ำ

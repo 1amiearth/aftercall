@@ -18,7 +18,9 @@ export function meetCodeFromUrl(url) {
   try { code = JSON.parse(atob(new URL(url).searchParams.get('coords'))).meetingCode; } catch {}
   // Otherwise a /meet/<id> link (Teams free: /v2/meet/meet-now, no ID), or a meetup-join link: its thread ID is long, the first 12 characters tell meetings apart.
   code = /^\d+$/.test(code) ? code : url.match(/\/meet\/([\w-]+)/)?.[1] ?? url.match(/19(?::|%3A)meeting_([A-Za-z0-9]{12})/i)?.[1];
-  return code ? `teams-${code}` : null;
+  // ponytail: Teams free and the /v2/ app often have no ID in the URL; any Teams page then counts as a meeting tab.
+  // Folders stay apart by their date and time. Ask the content script for the meeting ID if the code must be unique.
+  return `teams-${code ?? 'meeting'}`;
 }
 
 /** "Meet abc-defg-hij" or "Teams 439031496660244". */

@@ -58,7 +58,8 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   if (reason !== 'chrome_update') {
     const { matches, js } = chrome.runtime.getManifest().content_scripts[0];
     for (const tab of await chrome.tabs.query({ url: matches })) {
-      chrome.scripting.executeScript({ target: { tabId: tab.id }, files: js }).catch(() => {});
+      // A tab still loading gets the manifest copy; injecting too would run two copies.
+      if (tab.status === 'complete') chrome.scripting.executeScript({ target: { tabId: tab.id }, files: js }).catch(() => {});
     }
   }
   chrome.storage.local.remove(['apiKey', 'model']); // OpenRouter settings from 0.1.0; the key sat unencrypted
@@ -208,10 +209,10 @@ async function stop() {
     : null;
   latest.transcriptDownloadId = await downloadText(`${r.folder}/transcript.md`, transcriptMarkdown(latest));
   // Never throws: a failed debug file must not leave the recording stuck in 'stopping'.
-  const debugIds = !debug ? [] : await Promise.all([
+  const debugIds = !debug ? [] : (await Promise.allSettled([
     chrome.downloads.download({ url: debug.captions, filename: `${r.folder}/debug/captions.jsonl`, conflictAction: 'uniquify' }),
     chrome.downloads.download({ url: debug.emitted, filename: `${r.folder}/debug/emitted.jsonl`, conflictAction: 'uniquify' }),
-  ]).catch(() => []);
+  ])).filter((p) => p.status === 'fulfilled').map((p) => p.value);
   latest.debugDownloadIds = [...(latest.debugDownloadIds ?? []), ...debugIds];
   await setLatest(latest);
 

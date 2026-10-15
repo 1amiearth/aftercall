@@ -42,7 +42,7 @@
     // The other two wrapper names are from newer Teams builds (seen by other caption tools), not from our probe.
     captionRegion: () => document.querySelector('[data-tid="closed-caption-renderer-wrapper"], [data-tid="closed-caption-v2-window-wrapper"], [data-tid="closed-captions-renderer"]'),
     captionsOnButton: () => document.querySelector('[data-tid="closed-captions-turn-off-button"]'),
-    leaveButton: () => document.querySelector('[id*="hangup"], [data-tid*="hangup"]') ?? control(/^(leave|ออก)/i),
+    leaveButton: () => document.querySelector('[id*="hangup"], [data-tid*="hangup"]') ?? control(/^(leave|ออก)(\s*\(|$)/i), // "Leave" or "Leave (Ctrl+Shift+H)", not "Leave team"
     chatButton: () => control(/^(chat|แชท)$/i),
     chatBox: () => document.querySelector('[data-tid="ckeditor"]'),
     write(box, text) {
@@ -73,7 +73,7 @@
     return out;
   }
 
-  let tracker = null, region = null, observer = null, paused = false, wasInCall = false;
+  let tracker = null, region = null, observer = null, paused = false, wasInCall = false, missing = 0;
   const read = () => {
     if (!tracker || paused || !region) return;
     const blocks = SITE.readBlocks(region);
@@ -92,7 +92,8 @@
   const flushLog = () => {
     flushedAt = Date.now();
     const entries = log?.take();
-    return entries?.length ? chrome.runtime.sendMessage({ target: 'offscreen', type: 'debug-log', entries }).catch(() => {}) : Promise.resolve();
+    if (!entries?.length) return Promise.resolve();
+    try { return chrome.runtime.sendMessage({ target: 'offscreen', type: 'debug-log', entries }).catch(() => {}); } catch { return Promise.resolve(); }
   };
 
   function startCapture(isPaused = false) {
@@ -140,9 +141,9 @@
       if (!region) counts.noRegion++;
       if (log && Date.now() - flushedAt > 5000) flushLog();
     }
-    const inCall = !!SITE.leaveButton();
-    if (tracker && wasInCall && !inCall) send({ type: 'left-meeting' });
-    wasInCall = inCall;
+    missing = SITE.leaveButton() ? 0 : missing + 1;
+    if (!missing) wasInCall = true;
+    if (missing === 12 && tracker && wasInCall) send({ type: 'left-meeting' }); // ~3 s gone, not a toolbar re-render
   }, 250);
 
   async function postNotice() {

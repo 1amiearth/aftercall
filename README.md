@@ -79,7 +79,7 @@ Downloads/AfterCall/2026-09-24_1430_abc-defg-hij/
 
 - ภาพในไฟล์เป็นภาพเท่าที่แท็บ Meet แสดงให้คุณเห็น ไม่ใช่จอต้นทางความละเอียดเต็ม
 - ถ้าไม่เปิด CC จะไม่มี transcript และไม่มีสรุป
-- Teams รองรับเฉพาะบนเว็บ (`teams.microsoft.com`) ไม่รองรับแอป desktop และยังทดสอบแค่หน้าเข้าประชุมผ่านเบราว์เซอร์ (light-meetings) ภาษาอังกฤษ
+- Teams รองรับเฉพาะบนเว็บ (`teams.microsoft.com`, `teams.cloud.microsoft`, `teams.live.com` ของ Teams ฟรี) ไม่รองรับแอป desktop ทดสอบหน้าเข้าประชุมผ่านเบราว์เซอร์ (light-meetings) ภาษาอังกฤษ และ Teams ฟรี (Meet now)
 - Google หรือ Microsoft เปลี่ยนหน้าประชุมเมื่อไร การอ่าน caption และการส่งแชทอาจพังได้ ถ้าเจอ [เปิด issue](https://github.com/1amiearth/aftercall/issues)
 - ไฟล์ WebM บางโปรแกรมเล่นลากแถบเวลาไม่ได้
 - รองรับเฉพาะ Google Chrome การสรุปด้วย AI ใช้ได้บน macOS และ Linux
