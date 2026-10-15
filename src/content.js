@@ -1,4 +1,4 @@
-// Runs on Google Meet and Microsoft Teams (web: teams.microsoft.com, and teams.live.com for Teams free): reads live captions, posts the chat notice, notices leaving the call.
+// Runs on Google Meet and Microsoft Teams (web: teams.microsoft.com, teams.cloud.microsoft, and teams.live.com for Teams free): reads live captions, posts the chat notice, notices leaving the call.
 // Every page selector lives in the meet and teams tables. When Google or Microsoft changes the page, fix it there.
 (async () => {
   const { createUtteranceTracker } = await import(chrome.runtime.getURL('src/lib/utterance.js'));
@@ -39,7 +39,8 @@
   const control = (re) => [...document.querySelectorAll('button, [role="button"]')].find((b) => re.test(label(b) || b.textContent.trim()));
   const teams = {
     name: 'teams',
-    captionRegion: () => document.querySelector('[data-tid="closed-caption-renderer-wrapper"]'),
+    // The other two wrapper names are from newer Teams builds (seen by other caption tools), not from our probe.
+    captionRegion: () => document.querySelector('[data-tid="closed-caption-renderer-wrapper"], [data-tid="closed-caption-v2-window-wrapper"], [data-tid="closed-captions-renderer"]'),
     captionsOnButton: () => document.querySelector('[data-tid="closed-captions-turn-off-button"]'),
     leaveButton: () => document.querySelector('[id*="hangup"], [data-tid*="hangup"]') ?? control(/^(leave|ออก)/i),
     chatButton: () => control(/^(chat|แชท)$/i),

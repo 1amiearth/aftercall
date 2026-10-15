@@ -51,8 +51,16 @@ control(async () => {
 
 // Same path as the ticket 01 prototype: the icon click opens the panel and grants activeTab,
 // which tabCapture.getMediaStreamId needs when Start is pressed later.
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
+  // Chrome adds content scripts only to pages loaded after install or reload: a call already open would get no captions.
+  // (On a Chrome update every tab was loaded fresh and already has them.)
+  if (reason !== 'chrome_update') {
+    const { matches, js } = chrome.runtime.getManifest().content_scripts[0];
+    for (const tab of await chrome.tabs.query({ url: matches })) {
+      chrome.scripting.executeScript({ target: { tabId: tab.id }, files: js }).catch(() => {});
+    }
+  }
   chrome.storage.local.remove(['apiKey', 'model']); // OpenRouter settings from 0.1.0; the key sat unencrypted
 });
 chrome.action.onClicked.addListener((tab) => chrome.sidePanel.open({ tabId: tab.id }));

@@ -3,7 +3,7 @@ import { fmt } from './clock.js';
 // ponytail: "You"/"คุณ" is what Meet is assumed to show for your own captions; confirm with ticket 02 export.
 const SELF_LABEL = /^(you|คุณ)$/i;
 
-export const isTeamsUrl = (url) => /^https:\/\/teams\.(microsoft|live)\.com\//.test(url ?? '');
+export const isTeamsUrl = (url) => /^https:\/\/teams\.(microsoft\.com|live\.com|cloud\.microsoft)\//.test(url ?? '');
 
 /**
  * Meeting code from a tab URL, or null: a Meet room code ("abc-defg-hij") or "teams-" plus the Teams meeting ID.
