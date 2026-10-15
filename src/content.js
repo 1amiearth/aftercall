@@ -62,7 +62,8 @@
 
   const NOTICE = '🔴 AfterCall กำลังบันทึกการประชุมนี้และจะสรุปด้วย AI · AfterCall is recording this meeting and will summarize it with AI';
 
-  const send = (m) => chrome.runtime.sendMessage({ target: 'sw', ...m }).catch(() => {});
+  // After the extension reloads, this copy is orphaned: sendMessage throws before it returns a promise.
+  const send = (m) => { try { return chrome.runtime.sendMessage({ target: 'sw', ...m }).catch(() => {}); } catch { return Promise.resolve(); } };
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   function textLeaves(el) {
@@ -118,7 +119,8 @@
     return done;
   }
 
-  setInterval(() => {
+  const timer = setInterval(() => {
+    if (!chrome.runtime?.id) { clearInterval(timer); observer?.disconnect(); return; } // orphaned by a reload; the new copy takes over
     if (tracker) {
       const r = SITE.captionRegion() ?? null;
       if (r !== region) {
