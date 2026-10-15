@@ -1,4 +1,4 @@
-// Runs on Google Meet and Microsoft Teams (web): reads live captions, posts the chat notice, notices leaving the call.
+// Runs on Google Meet and Microsoft Teams (web: teams.microsoft.com, and teams.live.com for Teams free): reads live captions, posts the chat notice, notices leaving the call.
 // Every page selector lives in the meet and teams tables. When Google or Microsoft changes the page, fix it there.
 (async () => {
   const { createUtteranceTracker } = await import(chrome.runtime.getURL('src/lib/utterance.js'));
@@ -57,7 +57,7 @@
         .filter((b) => b.speaker && b.text),
   };
 
-  const SITE = location.hostname === 'teams.microsoft.com' ? teams : meet;
+  const SITE = location.hostname.startsWith('teams.') ? teams : meet;
 
   const NOTICE = '🔴 AfterCall กำลังบันทึกการประชุมนี้และจะสรุปด้วย AI · AfterCall is recording this meeting and will summarize it with AI';
 

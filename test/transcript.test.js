@@ -27,6 +27,8 @@ test('meetCodeFromUrl reads Teams meeting IDs', () => {
   assert.equal(meetCodeFromUrl('https://teams.microsoft.com/meet/439031496660244?p=x'), 'teams-439031496660244');
   assert.equal(meetCodeFromUrl('https://teams.microsoft.com/l/meetup-join/19%3ameeting_MjA4NzE2YTktYjQ4@thread.v2/0'), 'teams-MjA4NzE2YTkt');
   assert.equal(meetCodeFromUrl('https://teams.microsoft.com/v2/'), null);
+  assert.equal(meetCodeFromUrl('https://teams.live.com/v2/meet/meet-now'), 'teams-meet-now');
+  assert.equal(meetCodeFromUrl('https://teams.live.com/meet/9312345678901?p=x'), 'teams-9312345678901');
   assert.equal(meetCodeFromUrl('https://evil.com/?u=https://teams.microsoft.com/meet/123'), null);
 });
 

@@ -3,7 +3,7 @@ import { fmt } from './clock.js';
 // ponytail: "You"/"คุณ" is what Meet is assumed to show for your own captions; confirm with ticket 02 export.
 const SELF_LABEL = /^(you|คุณ)$/i;
 
-export const isTeamsUrl = (url) => /^https:\/\/teams\.microsoft\.com\//.test(url ?? '');
+export const isTeamsUrl = (url) => /^https:\/\/teams\.(microsoft|live)\.com\//.test(url ?? '');
 
 /**
  * Meeting code from a tab URL, or null: a Meet room code ("abc-defg-hij") or "teams-" plus the Teams meeting ID.
@@ -16,8 +16,8 @@ export function meetCodeFromUrl(url) {
   // The browser join page (light-meetings/launch) carries the meeting as base64 JSON in ?coords=.
   let code = null;
   try { code = JSON.parse(atob(new URL(url).searchParams.get('coords'))).meetingCode; } catch {}
-  // Otherwise a /meet/<id> link, or a meetup-join link: its thread ID is long, the first 12 characters tell meetings apart.
-  code = /^\d+$/.test(code) ? code : url.match(/\/meet\/(\d+)/)?.[1] ?? url.match(/19(?::|%3A)meeting_([A-Za-z0-9]{12})/i)?.[1];
+  // Otherwise a /meet/<id> link (Teams free: /v2/meet/meet-now, no ID), or a meetup-join link: its thread ID is long, the first 12 characters tell meetings apart.
+  code = /^\d+$/.test(code) ? code : url.match(/\/meet\/([\w-]+)/)?.[1] ?? url.match(/19(?::|%3A)meeting_([A-Za-z0-9]{12})/i)?.[1];
   return code ? `teams-${code}` : null;
 }
 
