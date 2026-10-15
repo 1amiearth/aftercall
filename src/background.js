@@ -199,10 +199,11 @@ async function stop() {
     ? await chrome.downloads.download({ url: video.url, filename: `${r.folder}/recording.webm`, conflictAction: 'uniquify' })
     : null;
   latest.transcriptDownloadId = await downloadText(`${r.folder}/transcript.md`, transcriptMarkdown(latest));
-  const debugIds = debug ? [
-    await chrome.downloads.download({ url: debug.captions, filename: `${r.folder}/debug/captions.jsonl`, conflictAction: 'uniquify' }),
-    await chrome.downloads.download({ url: debug.emitted, filename: `${r.folder}/debug/emitted.jsonl`, conflictAction: 'uniquify' }),
-  ] : [];
+  // Never throws: a failed debug file must not leave the recording stuck in 'stopping'.
+  const debugIds = !debug ? [] : await Promise.all([
+    chrome.downloads.download({ url: debug.captions, filename: `${r.folder}/debug/captions.jsonl`, conflictAction: 'uniquify' }),
+    chrome.downloads.download({ url: debug.emitted, filename: `${r.folder}/debug/emitted.jsonl`, conflictAction: 'uniquify' }),
+  ]).catch(() => []);
   latest.debugDownloadIds = [...(latest.debugDownloadIds ?? []), ...debugIds];
   await setLatest(latest);
 

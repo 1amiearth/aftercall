@@ -82,9 +82,10 @@
   };
 
   // Debug mode (settings): counters for the side panel, and a caption log the offscreen document keeps until Stop.
-  let debugOn = false, log = null, flushedAt = 0;
-  const counts = { reads: 0, parsed: 0, emitted: 0, noRegion: 0 };
-  chrome.storage.local.get('debug').then((r) => (debugOn = !!r.debug));
+  // Awaited, not fire-and-forget: after a tab reload, hello → startCapture below must already know.
+  let debugOn = !!(await chrome.storage.local.get('debug')).debug, log = null, flushedAt = 0;
+  const zero = () => ({ reads: 0, parsed: 0, emitted: 0, noRegion: 0 });
+  let counts = zero();
   chrome.storage.onChanged.addListener((c) => { if (c.debug) debugOn = !!c.debug.newValue; });
   const flushLog = () => {
     flushedAt = Date.now();
@@ -93,6 +94,7 @@
   };
 
   function startCapture(isPaused = false) {
+    counts = zero(); // per recording
     log = debugOn ? createCaptionLog({ meta: { site: SITE.name, url: location.origin + location.pathname, lang: document.documentElement.lang } }) : null;
     tracker = createUtteranceTracker({
       emit: (u, why) => {
@@ -170,7 +172,7 @@
         inCall: !!SITE.leaveButton(),
         seen: !!r?.innerText.trim(), // captions on screen…
         parsed: blocks.length, // …and how many bubbles we could read
-        debug: debugOn ? { ...counts, region: !!r, logging: !!log, last: blocks.at(-1) && { speaker: blocks.at(-1).speaker, text: blocks.at(-1).text.slice(-80) } } : null,
+        debug: debugOn ? { ...counts, parsed: blocks.length, region: !!r, logging: !!log, last: blocks.at(-1) && { speaker: blocks.at(-1).speaker, text: blocks.at(-1).text.slice(-80) } } : null,
       });
     }
     if (m.type === 'capture') {
