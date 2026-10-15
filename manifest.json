@@ -51,7 +51,8 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "src/lib/utterance.js"
+        "src/lib/utterance.js",
+        "src/lib/debug.js"
       ],
       "matches": [
         "https://meet.google.com/*"

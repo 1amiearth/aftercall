@@ -51,3 +51,18 @@ test('removed block and flush close without duplicates', () => {
   tr.flush();
   assert.equal(out.length, 1);
 });
+
+test('emit says what closed each utterance', () => {
+  let t = 0;
+  const why = [];
+  const tr = createUtteranceTracker({ emit: (u, w) => why.push([u.speaker, w]), now: () => t });
+  const a = {}, b = {}, c = {};
+  tr.update([{ key: a, speaker: 'A', text: 'one' }]);
+  tr.update([{ key: a, speaker: 'A', text: 'one' }, { key: b, speaker: 'B', text: 'two' }]); // A: another speaker
+  t = 2000; tr.tick(); // B: quiet
+  tr.update([{ key: c, speaker: 'C', text: 'three' }]); // nothing open but C
+  tr.update([]); // C: gone
+  tr.update([{ key: a, speaker: 'A', text: 'one more' }]);
+  tr.flush(); // A: flush
+  assert.deepEqual(why, [['A', 'speaker'], ['B', 'idle'], ['C', 'gone'], ['A', 'flush']]);
+});

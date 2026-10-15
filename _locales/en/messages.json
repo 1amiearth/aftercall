@@ -334,5 +334,38 @@
   },
   "notesPlaceholder": {
     "message": "e.g. This is a daily standup. Focus on blockers and who needs help"
+  },
+  "debugLabel": {
+    "message": "Caption debug mode"
+  },
+  "debugHint": {
+    "message": "For fixing caption problems. Each recording also saves every caption change to a debug folder, and the main screen gets a Capture page button. The files contain what people said; keep them private."
+  },
+  "debugTitle": {
+    "message": "Caption debug"
+  },
+  "debugNoPage": {
+    "message": "This tab does not answer yet. Reload it once"
+  },
+  "debugNoRegion": {
+    "message": "No caption area found on the page. Turn on captions"
+  },
+  "debugStats": {
+    "message": "$1 caption bubbles on screen · $2 reads · $3 lines sent"
+  },
+  "debugLogging": {
+    "message": "Caption log is recording"
+  },
+  "debugNotLogging": {
+    "message": "Caption log starts at the next Start"
+  },
+  "capturePage": {
+    "message": "Capture page"
+  },
+  "captured": {
+    "message": "Saved $1"
+  },
+  "captureFailed": {
+    "message": "Could not read this tab. Reload it and try again"
   }
 }
