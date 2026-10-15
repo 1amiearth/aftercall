@@ -33,13 +33,13 @@
   };
 
   // From a probe of the browser join page (light-meetings) in English, 2026-10: data-tid attributes do not change with the UI language.
-  // ponytail: Leave and Chat have no data-tid there, so they go by label; the Thai labels are guesses.
+  // ponytail: Leave and Chat were not found by data-tid or aria-label in the probe, so they go by id, label or text; the Thai words are guesses.
+  const control = (re) => [...document.querySelectorAll('button, [role="button"]')].find((b) => re.test(label(b) || b.textContent.trim()));
   const teams = {
     captionRegion: () => document.querySelector('[data-tid="closed-caption-renderer-wrapper"]'),
     captionsOnButton: () => document.querySelector('[data-tid="closed-captions-turn-off-button"]'),
-    leaveButton: () => document.querySelector('#hangup-button, [data-tid="hangup-main-btn"]')
-      ?? [...document.querySelectorAll('button')].find((b) => /^(leave|ออก)/i.test(label(b) || b.textContent.trim())),
-    chatButton: () => button(/^(chat|แชท)$/i),
+    leaveButton: () => document.querySelector('[id*="hangup"], [data-tid*="hangup"]') ?? control(/^(leave|ออก)/i),
+    chatButton: () => control(/^(chat|แชท)$/i),
     chatBox: () => document.querySelector('[data-tid="ckeditor"]'),
     write(box, text) {
       box.focus();
@@ -47,6 +47,7 @@
     },
     sendButton: () => document.querySelector('[data-tid="newMessageCommands-send"]'),
     // Each bubble keeps its caption-text node while Teams rewrites the words, so that node is the bubble's identity.
+    // ponytail: the list is virtualized; bubbles scrolled back into view get new nodes and are emitted again. Key by speaker + start text if that shows up.
     readBlocks: (region) =>
       [...region.querySelectorAll('[data-tid="closed-caption-text"]')]
         .map((el) => ({ key: el, speaker: el.closest('.fui-ChatMessageCompact')?.querySelector('[data-tid="author"]')?.textContent.trim() ?? '', text: el.textContent.trim() }))

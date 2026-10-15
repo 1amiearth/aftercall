@@ -72,7 +72,7 @@ Service worker      ตรวจแท็บ Meet, ขอ stream id, สั่�
 | Side Panel | `src/sidepanel/` | ปุ่มควบคุม, ตัวจับเวลา, สวิตช์ไมค์และแชท, เลือก AI (Claude Code / Codex), โมเดล, สถานะการเชื่อมต่อ |
 | Service worker | `src/background.js` | ประสานงานอย่างเดียว ไม่ถือ media stream |
 | Offscreen | `src/offscreen/` | `getUserMedia` จาก stream id, Web Audio mix, `MediaRecorder` |
-| Content script | `src/content.js` | `MutationObserver` บน captions, พิมพ์แจ้งในช่องแชท selector ของแต่ละเว็บอยู่ในตาราง `meet` และ `teams` เลือกตาม hostname |
+| Content script | `src/content.js` | `MutationObserver` บน captions, พิมพ์แจ้งในช่องแชท (selector ของแต่ละเว็บอยู่ในตาราง `meet` และ `teams` เลือกตาม hostname) |
 | สรุป | `src/lib/summary.js` | ประกอบพรอมต์จาก transcript แล้วส่งให้ native host |
 | หน้ารีวิว | `src/lib/review.js` | สร้าง `review.html` วิดีโอคู่ transcript และสรุป |
 | Native host | `native/` | รัน CLI ของ Claude Code หรือ Codex ในเครื่อง ส่ง JSON กลับ |
