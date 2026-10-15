@@ -25,6 +25,7 @@ const s = {
   unreadablePolls: 0,
   shortcuts: {}, // command name -> key, e.g. { 'toggle-recording': '⌥⇧R' }
   flash: null, // short confirmation, e.g. after a mark
+  debugFlash: null, // result of "Capture page"
   host: undefined, // { clis: { claude, codex } (version or null), models: { claude: [{ id, name }], codex: [...] } }; { error } = host not reachable, undefined = checking
 };
 
@@ -215,7 +216,20 @@ function mainView() {
     : live() && recordingHere() ? recordingView()
     : `${checklist()}${startButton()}`;
   return `<div class="top">${room}<button class="icon-btn" data-a="settings" aria-label="${esc(t('settings'))}">${GEAR}</button></div>
-    <main>${s.error ? note('err', s.error) : ''}${body}${live() ? '' : latestView()}</main>`;
+    <main>${s.error ? note('err', s.error) : ''}${body}${debugView()}${live() ? '' : latestView()}</main>`;
+}
+
+// Debug mode only: what the content script reads right now, and a button that saves the page structure.
+function debugView() {
+  if (!s.settings.debug || !s.meetCode) return '';
+  const d = s.page?.debug;
+  const stats = !d ? t('debugNoPage') : !d.region ? t('debugNoRegion') : t('debugStats', d.parsed, d.reads, d.emitted);
+  return `<section class="debug"><h2>${t('debugTitle')}</h2>
+    <p>${esc(stats)}</p>
+    ${d?.last ? `<p><b>${esc(d.last.speaker)}</b> ${esc(d.last.text)}</p>` : ''}
+    ${d ? `<p>${esc(t(d.logging ? 'debugLogging' : 'debugNotLogging'))}</p>` : ''}
+    <div class="actions">${btn(t('capturePage'), 'capture')}</div>
+    ${s.debugFlash ? `<p role="status">${esc(s.debugFlash)}</p>` : ''}</section>`;
 }
 
 function settingsView() {
@@ -239,6 +253,8 @@ function settingsView() {
       <span class="sub">${t('nameHint')}</span></label>
     <label class="switch">${t('micLabel')}<input type="checkbox" role="switch" data-setting="mic" ${st.mic ? 'checked' : ''}></label>
     <label class="switch">${t('chatLabel')}<input type="checkbox" role="switch" data-setting="chat" ${st.chat ? 'checked' : ''}></label>
+    <div><label class="switch">${t('debugLabel')}<input type="checkbox" role="switch" data-setting="debug" ${st.debug ? 'checked' : ''}></label>
+      <p class="switch-hint">${t('debugHint')}</p></div>
   </section>
   ${connectView()}
   ${st.chat ? '' : note('err', t('chatOff'))}</main>`;
@@ -317,6 +333,11 @@ const actions = {
     if (!res?.ok) return;
     s.flash = t('marked', fmt(res.t));
     setTimeout(() => { s.flash = null; if (s.view === 'main') render(); }, 2500);
+  },
+  async capture() {
+    const res = await sw('capture', { tabId: s.tabId });
+    s.debugFlash = res?.ok ? t('captured', res.file) : t('captureFailed');
+    setTimeout(() => { s.debugFlash = null; if (s.view === 'main') render(); }, 6000);
   },
   pause: () => sw('pause'),
   resume: () => sw('resume'),

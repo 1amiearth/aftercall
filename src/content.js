@@ -2,6 +2,7 @@
 // Every page selector lives in the meet and teams tables. When Google or Microsoft changes the page, fix it there.
 (async () => {
   const { createUtteranceTracker } = await import(chrome.runtime.getURL('src/lib/utterance.js'));
+  const { createCaptionLog, capturePage } = await import(chrome.runtime.getURL('src/lib/debug.js'));
 
   const label = (el) => el.getAttribute('aria-label') || '';
   const button = (re) => [...document.querySelectorAll('button[aria-label]')].find((b) => re.test(label(b)));
@@ -9,6 +10,7 @@
   // Chat, leave and CC-button labels were seen in the ticket 02 probe (English UI); Thai labels are guesses.
   // ponytail: caption structure (one child per bubble, speaker first) is unconfirmed until a ticket 02 export with captions.
   const meet = {
+    name: 'meet',
     captionRegion: () => [...document.querySelectorAll('[role="region"][aria-label]')].find((n) => /caption|คำบรรยาย/i.test(label(n))),
     captionsOnButton: () => button(/turn off captions|ปิดคำบรรยาย/i),
     leaveButton: () => button(/leave call|ออกจากการโทร|ออกจากสาย|วางสาย/i),
@@ -36,6 +38,7 @@
   // ponytail: Leave and Chat were not found by data-tid or aria-label in the probe, so they go by id, label or text; the Thai words are guesses.
   const control = (re) => [...document.querySelectorAll('button, [role="button"]')].find((b) => re.test(label(b) || b.textContent.trim()));
   const teams = {
+    name: 'teams',
     captionRegion: () => document.querySelector('[data-tid="closed-caption-renderer-wrapper"]'),
     captionsOnButton: () => document.querySelector('[data-tid="closed-captions-turn-off-button"]'),
     leaveButton: () => document.querySelector('[id*="hangup"], [data-tid*="hangup"]') ?? control(/^(leave|ออก)/i),
@@ -69,10 +72,35 @@
   }
 
   let tracker = null, region = null, observer = null, paused = false, wasInCall = false;
-  const read = () => tracker && !paused && region && tracker.update(SITE.readBlocks(region));
+  const read = () => {
+    if (!tracker || paused || !region) return;
+    const blocks = SITE.readBlocks(region);
+    counts.reads++;
+    counts.parsed = blocks.length;
+    log?.snapshot(blocks);
+    tracker.update(blocks);
+  };
+
+  // Debug mode (settings): counters for the side panel, and a caption log the offscreen document keeps until Stop.
+  let debugOn = false, log = null, flushedAt = 0;
+  const counts = { reads: 0, parsed: 0, emitted: 0, noRegion: 0 };
+  chrome.storage.local.get('debug').then((r) => (debugOn = !!r.debug));
+  chrome.storage.onChanged.addListener((c) => { if (c.debug) debugOn = !!c.debug.newValue; });
+  const flushLog = () => {
+    flushedAt = Date.now();
+    const entries = log?.take();
+    return entries?.length ? chrome.runtime.sendMessage({ target: 'offscreen', type: 'debug-log', entries }).catch(() => {}) : Promise.resolve();
+  };
 
   function startCapture(isPaused = false) {
-    tracker = createUtteranceTracker({ emit: (u) => send({ type: 'utterance', ...u }) });
+    log = debugOn ? createCaptionLog({ meta: { site: SITE.name, url: location.origin + location.pathname, lang: document.documentElement.lang } }) : null;
+    tracker = createUtteranceTracker({
+      emit: (u, why) => {
+        counts.emitted++;
+        log?.emit(u, why);
+        send({ type: 'utterance', ...u });
+      },
+    });
     paused = isPaused;
   }
 
@@ -81,6 +109,10 @@
     tracker = null;
     observer?.disconnect();
     observer = region = null;
+    log?.state('stop');
+    const done = flushLog();
+    log = null;
+    return done;
   }
 
   setInterval(() => {
@@ -99,6 +131,9 @@
         }
       }
       if (!paused) tracker.tick();
+      if (region && !paused) log?.snapshot(SITE.readBlocks(region)); // keeps the last state of a burst the throttle skipped
+      if (!region) counts.noRegion++;
+      if (log && Date.now() - flushedAt > 5000) flushLog();
     }
     const inCall = !!SITE.leaveButton();
     if (tracker && wasInCall && !inCall) send({ type: 'left-meeting' });
@@ -124,17 +159,26 @@
 
   chrome.runtime.onMessage.addListener((m, _sender, reply) => {
     if (m.type === 'rec:start') { startCapture(); if (m.chat) postNotice(); }
-    if (m.type === 'rec:pause') { tracker?.flush(); paused = true; }
-    if (m.type === 'rec:resume') paused = false;
-    if (m.type === 'rec:stop') stopCapture(); // flushes the last lines before we reply
+    if (m.type === 'rec:pause') { tracker?.flush(); paused = true; log?.state('pause'); }
+    if (m.type === 'rec:resume') { paused = false; log?.state('resume'); }
+    if (m.type === 'rec:stop') { stopCapture().then(() => reply({ ok: true })); return true; } // last lines and log out before we reply
     if (m.type === 'status') {
       const r = SITE.captionRegion();
+      const blocks = r ? SITE.readBlocks(r) : [];
       return reply({
         cc: !!r || !!SITE.captionsOnButton(),
         inCall: !!SITE.leaveButton(),
         seen: !!r?.innerText.trim(), // captions on screen…
-        parsed: r ? SITE.readBlocks(r).length : 0, // …and how many bubbles we could read
+        parsed: blocks.length, // …and how many bubbles we could read
+        debug: debugOn ? { ...counts, region: !!r, logging: !!log, last: blocks.at(-1) && { speaker: blocks.at(-1).speaker, text: blocks.at(-1).text.slice(-80) } } : null,
       });
+    }
+    if (m.type === 'capture') {
+      const r = SITE.captionRegion() ?? null;
+      return reply(capturePage({
+        doc: document, site: SITE.name, region: r, blocks: r ? SITE.readBlocks(r) : [],
+        found: { region: !!r, cc: !!SITE.captionsOnButton(), leave: !!SITE.leaveButton(), chatButton: !!SITE.chatButton(), chatBox: !!SITE.chatBox() },
+      }));
     }
     reply({ ok: true });
   });

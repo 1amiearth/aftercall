@@ -334,5 +334,38 @@
   },
   "notesPlaceholder": {
     "message": "เช่น นี่คือ daily standup เน้นงานที่ติดและใครต้องช่วย"
+  },
+  "debugLabel": {
+    "message": "โหมด debug ของ caption"
+  },
+  "debugHint": {
+    "message": "ใช้ตามหาปัญหา caption ทุกครั้งที่บันทึกจะเก็บการเปลี่ยนแปลงของ caption ทุกครั้งลงโฟลเดอร์ debug และหน้าแรกจะมีปุ่มบันทึกโครงหน้าเว็บ ไฟล์มีคำพูดของคนในประชุม อย่าแชร์ต่อ"
+  },
+  "debugTitle": {
+    "message": "Debug caption"
+  },
+  "debugNoPage": {
+    "message": "แท็บนี้ยังไม่ตอบ รีโหลดหนึ่งครั้ง"
+  },
+  "debugNoRegion": {
+    "message": "ไม่เจอส่วน caption ในหน้า เปิด caption ก่อน"
+  },
+  "debugStats": {
+    "message": "caption บนจอ $1 กล่อง · อ่าน $2 ครั้ง · ส่ง $3 บรรทัด"
+  },
+  "debugLogging": {
+    "message": "กำลังเก็บ log ของ caption"
+  },
+  "debugNotLogging": {
+    "message": "log ของ caption จะเริ่มเก็บตอนกดเริ่มบันทึกครั้งถัดไป"
+  },
+  "capturePage": {
+    "message": "บันทึกโครงหน้าเว็บ"
+  },
+  "captured": {
+    "message": "บันทึกแล้ว $1"
+  },
+  "captureFailed": {
+    "message": "อ่านแท็บนี้ไม่ได้ รีโหลดแล้วลองใหม่"
   }
 }

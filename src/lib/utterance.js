@@ -8,16 +8,17 @@
  */
 
 /**
- * @param {{ emit: (u: Utterance) => void, idleMs?: number, now?: () => number }} opts
+ * @param {{ emit: (u: Utterance, why: 'speaker' | 'gone' | 'idle' | 'flush') => void, idleMs?: number, now?: () => number }} opts
+ *   why: what closed the utterance (another speaker started, the block disappeared, the text went quiet, flush), for the debug log
  */
 export function createUtteranceTracker({ emit, idleMs = 1500, now = Date.now }) {
   const open = new Map(); // key -> { speaker, text, done, startedAt, last }
   const emitted = new WeakMap(); // key -> text already emitted, survives the block being reopened
 
-  function close(key, u) {
+  function close(key, u, why) {
     // ponytail: if Meet rewrites text that was already emitted, we emit the whole new text (may duplicate a few words).
     const piece = (u.text.startsWith(u.done) ? u.text.slice(u.done.length) : u.text).trim();
-    if (piece) emit({ wall: u.startedAt, speaker: u.speaker, text: piece });
+    if (piece) emit({ wall: u.startedAt, speaker: u.speaker, text: piece }, why);
     u.done = u.text;
     emitted.set(key, u.text);
   }
@@ -34,7 +35,7 @@ export function createUtteranceTracker({ emit, idleMs = 1500, now = Date.now }) 
           u = { speaker: b.speaker, text: done, done, startedAt: now(), last: now() };
           open.set(b.key, u);
           for (const [k, o] of open) {
-            if (k !== b.key && o.speaker !== b.speaker) { close(k, o); open.delete(k); }
+            if (k !== b.key && o.speaker !== b.speaker) { close(k, o, 'speaker'); open.delete(k); }
           }
         }
         if (b.text !== u.text) {
@@ -43,15 +44,15 @@ export function createUtteranceTracker({ emit, idleMs = 1500, now = Date.now }) 
           u.last = now();
         }
       }
-      for (const [k, u] of open) if (!seen.has(k)) { close(k, u); open.delete(k); }
+      for (const [k, u] of open) if (!seen.has(k)) { close(k, u, 'gone'); open.delete(k); }
     },
     /** Call every ~250 ms. */
     tick() {
-      for (const [k, u] of open) if (u.text !== u.done && now() - u.last >= idleMs) close(k, u);
+      for (const [k, u] of open) if (u.text !== u.done && now() - u.last >= idleMs) close(k, u, 'idle');
     },
     /** Close everything, e.g. on pause or stop. */
     flush() {
-      for (const [k, u] of open) close(k, u);
+      for (const [k, u] of open) close(k, u, 'flush');
       open.clear();
     },
   };

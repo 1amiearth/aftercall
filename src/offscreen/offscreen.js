@@ -2,16 +2,21 @@
 // Numbers below were measured in the ticket 01 prototype: 1080p15 at 1.5 Mbps ≈ 1.1 GB per hour.
 
 let rec, ctx, streams = [], chunks = [];
+let debugTab = null, debugLog = []; // caption debug log from the recorded tab's content script (src/lib/debug.js)
 
-chrome.runtime.onMessage.addListener((m, _sender, reply) => {
+chrome.runtime.onMessage.addListener((m, sender, reply) => {
   if (m.target !== 'offscreen') return;
+  if (m.type === 'debug-log') { if (sender.tab?.id === debugTab) debugLog.push(...m.entries); return; }
+  if (m.type === 'debug-dump') { reply(dumpDebug()); return; }
   if (m.type === 'start') { start(m).then(reply, (e) => reply({ ok: false, error: `${e.name}: ${e.message}` })); return true; }
   if (m.type === 'pause') rec?.state === 'recording' && rec.pause();
   if (m.type === 'resume') rec?.state === 'paused' && rec.resume();
   if (m.type === 'stop') { stop().then(reply); return true; }
 });
 
-async function start({ streamId, mic }) {
+async function start({ streamId, mic, tabId }) {
+  debugTab = tabId;
+  debugLog = [];
   const src = { chromeMediaSource: 'tab', chromeMediaSourceId: streamId };
   const tab = await navigator.mediaDevices.getUserMedia({
     audio: { mandatory: src },
@@ -44,6 +49,15 @@ async function start({ streamId, mic }) {
   tab.getVideoTracks()[0].onended = () => chrome.runtime.sendMessage({ target: 'sw', type: 'track-ended' });
   rec.start(1000);
   return { ok: true, micOk };
+}
+
+/** Blob URLs for debug/captions.jsonl (everything) and debug/emitted.jsonl (closed utterances), or null when nothing was logged. */
+function dumpDebug() {
+  if (!debugLog.length) return null;
+  const jsonl = (entries) => URL.createObjectURL(new Blob(entries.map((e) => `${JSON.stringify(e)}\n`), { type: 'application/x-ndjson' }));
+  const out = { captions: jsonl(debugLog), emitted: jsonl(debugLog.filter((e) => e.k === 'emit')) };
+  debugLog = [];
+  return out;
 }
 
 function stop() {

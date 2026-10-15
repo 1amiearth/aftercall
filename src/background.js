@@ -4,12 +4,13 @@ import { summarize, summaryMarkdown, PROVIDERS } from './lib/summary.js';
 import { SETTINGS } from './lib/settings.js';
 import { speech } from './lib/health.js';
 import { reviewHtml } from './lib/review.js';
+import { captureHtml } from './lib/debug.js';
 
 // State lives in storage so a restarted service worker picks up where it left off.
 //   rec    (storage.session) the recording in progress:
 //          { phase: 'idle'|'recording'|'paused'|'stopping', tabId, meetCode, folder, clock }
 //   latest (storage.local)   the one finished recording kept for "summarize again":
-//          { meetCode, folder, startedAt, durationMs, lines, micOk, videoDownloadId, transcriptDownloadId, reviewDownloadId, summaryDownloadIds,
+//          { meetCode, folder, startedAt, durationMs, lines, micOk, videoDownloadId, transcriptDownloadId, reviewDownloadId, summaryDownloadIds, debugDownloadIds,
 //            summary: { status: 'none'|'ready'|'running'|'done'|'failed'|'empty', kind?, message?, result? } }
 //   catchup (storage.session) a summary of the recording so far, asked for mid-meeting; never written to disk:
 //          { status: 'running'|'done'|'failed', at, result?, kind? }
@@ -79,6 +80,7 @@ chrome.runtime.onMessage.addListener((m, sender, reply) => {
     summarize: () => control(summarizeLatest),
     catchup: () => control(catchUp),
     'delete-latest': () => control(deleteLatest),
+    capture: () => capture(m.tabId),
     mark: () => lines(mark),
     utterance: () => lines(() => addLine(tabId, m)),
     'left-meeting': () => autoStop(tabId),
@@ -122,7 +124,7 @@ async function start(tabId) {
   const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tabId });
   const s = await settings();
   await openOffscreen();
-  const res = await toOffscreen({ type: 'start', streamId, mic: s.mic });
+  const res = await toOffscreen({ type: 'start', streamId, mic: s.mic, tabId });
   if (!res?.ok) {
     await closeOffscreen();
     return { ok: false, error: res?.error ?? 'capture' };
@@ -189,6 +191,7 @@ async function stop() {
   await toTab(r.tabId, { type: 'rec:stop' }); // the page flushes its last caption lines before replying
   await lines(() => {});
   const video = await toOffscreen({ type: 'stop' });
+  const debug = await toOffscreen({ type: 'debug-dump' });
 
   const latest = { ...(await getLatest()), durationMs: videoMs(r.clock, end) };
   latest.summary = { status: speech(latest.lines).length ? 'ready' : 'empty' };
@@ -196,9 +199,15 @@ async function stop() {
     ? await chrome.downloads.download({ url: video.url, filename: `${r.folder}/recording.webm`, conflictAction: 'uniquify' })
     : null;
   latest.transcriptDownloadId = await downloadText(`${r.folder}/transcript.md`, transcriptMarkdown(latest));
+  const debugIds = debug ? [
+    await chrome.downloads.download({ url: debug.captions, filename: `${r.folder}/debug/captions.jsonl`, conflictAction: 'uniquify' }),
+    await chrome.downloads.download({ url: debug.emitted, filename: `${r.folder}/debug/emitted.jsonl`, conflictAction: 'uniquify' }),
+  ] : [];
+  latest.debugDownloadIds = [...(latest.debugDownloadIds ?? []), ...debugIds];
   await setLatest(latest);
 
-  if (latest.videoDownloadId) await downloadFinished(latest.videoDownloadId);
+  // Blob URLs die with the offscreen document: close it only once these are on disk.
+  for (const id of [latest.videoDownloadId, ...debugIds]) if (id != null) await downloadFinished(id);
   await closeOffscreen();
   await setLatest({ ...latest, reviewDownloadId: await writeReview(latest) });
   await setRec(IDLE);
@@ -277,6 +286,26 @@ async function catchUp() {
   return { ok: true };
 }
 
+// ---------- debug ----------
+
+/** Saves the page structure (side panel "Capture page"): into the recording's debug folder while recording this tab, else AfterCall/debug. */
+async function capture(tabId) {
+  const page = await chrome.tabs.sendMessage(tabId, { type: 'capture' }).catch(() => null);
+  if (!page) return { ok: false };
+  const r = await getRec();
+  const here = r.tabId === tabId && LIVE.includes(r.phase);
+  const name = `dom-${page.site}-${page.lang || 'xx'}-${new Date().toTimeString().slice(0, 8).replaceAll(':', '')}.html`;
+  const filename = `${here ? r.folder : 'AfterCall'}/debug/${name}`;
+  const id = await downloadText(filename, captureHtml(page), 'text/html');
+  if (here) {
+    await lines(async () => { // the lines queue also writes latest
+      const l = await getLatest();
+      if (l?.folder === r.folder) await setLatest({ ...l, debugDownloadIds: [...(l.debugDownloadIds ?? []), id] });
+    });
+  }
+  return { ok: true, file: `debug/${name}` };
+}
+
 // ---------- delete ----------
 
 // Deletes the latest recording's files from disk and forgets it. The empty folder stays: the downloads API cannot remove folders.
@@ -285,7 +314,7 @@ async function deleteLatest() {
   if (!latest) return { ok: true };
   if ([...LIVE, 'stopping'].includes(r.phase) || latest.summary?.status === 'running') return { ok: false, error: 'busy' };
   // summaryDownloadId: single id stored by 0.1.0 before summaryDownloadIds
-  for (const id of [latest.videoDownloadId, latest.transcriptDownloadId, latest.reviewDownloadId, latest.summaryDownloadId, ...(latest.summaryDownloadIds ?? [])]) {
+  for (const id of [latest.videoDownloadId, latest.transcriptDownloadId, latest.reviewDownloadId, latest.summaryDownloadId, ...(latest.summaryDownloadIds ?? []), ...(latest.debugDownloadIds ?? [])]) {
     if (id != null) await forgetDownload(id);
   }
   await chrome.storage.local.remove('latest');
