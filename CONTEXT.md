@@ -1,13 +1,13 @@
 # AfterCall
 
-ส่วนขยาย Chrome ที่บันทึกการประชุม Google Meet จากฝั่งผู้ใช้ เก็บคำพูดเป็นข้อความ แล้วสรุปด้วย AI
+ส่วนขยาย Chrome ที่บันทึกการประชุม Google Meet และ Microsoft Teams (เว็บ) จากฝั่งผู้ใช้ เก็บคำพูดเป็นข้อความ แล้วสรุปด้วย AI
 
 ## Language
 
 ### การประชุมและการบันทึก
 
 **ห้องประชุม (Meeting room)**:
-ห้อง Google Meet หนึ่งห้อง ระบุด้วยรหัสห้องใน URL เช่น `abc-defg-hij`
+ห้อง Google Meet หรือการประชุม Teams หนึ่งห้อง ระบุด้วยรหัสจาก URL เช่น `abc-defg-hij` หรือ `teams-439031496660244` (Teams ที่ URL ไม่มีรหัส เช่น Meet now ใช้ `teams-meet-now` หรือ `teams-meeting`)
 _Avoid_: meeting, call, session
 
 **การบันทึก (Recording)**:
@@ -33,7 +33,7 @@ _Avoid_: crash, abort
 _Avoid_: caption line, sentence, segment
 
 **ผู้พูด (Speaker)**:
-ชื่อที่ Meet แสดงกำกับคำพูด ถ้าเป็นตัวผู้บันทึกเอง ใช้ชื่อที่ผู้ใช้ตั้งไว้แทนคำว่า "คุณ/You"
+ชื่อที่ Meet หรือ Teams แสดงกำกับคำพูด ถ้าเป็นตัวผู้บันทึกเอง ใช้ชื่อที่ผู้ใช้ตั้งไว้แทนคำว่า "คุณ/You"
 _Avoid_: participant, user
 
 **ผู้บันทึก (Recorder)**:
@@ -53,5 +53,5 @@ _Avoid_: minutes, notes, recap
 _Avoid_: task, todo
 
 **การแจ้งในแชท (Chat notice)**:
-ข้อความสองภาษาที่ส่งเข้าแชท Meet ตอนเริ่มบันทึก บอกคนในห้องว่ากำลังบันทึกและจะสรุปด้วย AI
+ข้อความสองภาษาที่ส่งเข้าแชทของห้องตอนเริ่มบันทึก บอกคนในห้องว่ากำลังบันทึกและจะสรุปด้วย AI
 _Avoid_: consent, banner, alert

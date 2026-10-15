@@ -6,7 +6,7 @@
 //   { k: 'snap', t, ids: [id...], set: [{ id, speaker, text }] } caption blocks on screen, oldest first;
 //                                                               set holds only blocks that are new or changed since the last snap
 //   { k: 'emit', t, wall, speaker, text, why }                  an utterance the tracker closed (why: speaker | gone | idle | flush)
-//   { k: 'state', t, state }                                    pause | resume | stop | truncated
+//   { k: 'state', t, state }                                    pause | resume | stop | pagehide | truncated
 // debug/emitted.jsonl holds the 'emit' lines only.
 
 // ponytail: ~50k snaps covers 2-3 h of busy captions; after that only emits are logged. Stream to disk if longer calls need full logs.

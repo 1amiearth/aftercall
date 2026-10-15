@@ -1,5 +1,5 @@
 import { startClock, pauseClock, resumeClock, videoMs } from './lib/clock.js';
-import { meetCodeFromUrl, isTeamsUrl, folderName, transcriptMarkdown, speakerName, header } from './lib/transcript.js';
+import { meetCodeFromUrl, sameMeeting, folderName, transcriptMarkdown, speakerName, header } from './lib/transcript.js';
 import { summarize, summaryMarkdown, PROVIDERS } from './lib/summary.js';
 import { SETTINGS } from './lib/settings.js';
 import { speech } from './lib/health.js';
@@ -108,9 +108,8 @@ chrome.tabs.onRemoved.addListener((tabId) => autoStop(tabId));
 chrome.tabs.onUpdated.addListener(async (tabId, info) => {
   if (!info.url) return;
   const r = await getRec();
-  // Teams rewrites its URL during a call, so there only leaving Teams stops; its content script reports leaving the call.
-  const stillTeams = r.meetCode?.startsWith('teams-') && isTeamsUrl(info.url);
-  if (r.tabId === tabId && meetCodeFromUrl(info.url) !== r.meetCode && !stillTeams) autoStop(tabId);
+  // Left the room, or went to another meeting. A Teams URL without an ID may still be the same call: the content script reports leaving it.
+  if (r.tabId === tabId && !sameMeeting(r.meetCode, meetCodeFromUrl(info.url))) autoStop(tabId);
 });
 
 async function autoStop(tabId) {

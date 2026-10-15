@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { meetCodeFromUrl, speakerName, folderName, transcriptMarkdown, talkShare } from '../src/lib/transcript.js';
+import { meetCodeFromUrl, sameMeeting, speakerName, folderName, transcriptMarkdown, talkShare } from '../src/lib/transcript.js';
 
 test('talk share by text, marks ignored, largest first', () => {
   const share = talkShare([
@@ -11,6 +11,17 @@ test('talk share by text, marks ignored, largest first', () => {
   ]);
   assert.deepEqual(share, [{ speaker: 'B', share: 0.6, turns: 1 }, { speaker: 'A', share: 0.4, turns: 2 }]);
   assert.deepEqual(talkShare([]), []);
+});
+
+test('same meeting: Meet by code, Teams also across URLs without an ID', () => {
+  assert.equal(sameMeeting('abc-defg-hij', 'abc-defg-hij'), true);
+  assert.equal(sameMeeting('abc-defg-hij', 'xyz-defg-hij'), false);
+  assert.equal(sameMeeting('abc-defg-hij', null), false);
+  assert.equal(sameMeeting('teams-439031496660244', 'teams-meeting'), true); // URL rewritten mid-call
+  assert.equal(sameMeeting('teams-meet-now', 'teams-9312345678901'), true);
+  assert.equal(sameMeeting('teams-439031496660244', 'teams-9312345678901'), false); // another meeting
+  assert.equal(sameMeeting('teams-meeting', 'abc-defg-hij'), false);
+  assert.equal(sameMeeting('teams-meeting', null), false); // left Teams
 });
 
 test('meet code from URL', () => {

@@ -43,7 +43,16 @@
     captionRegion: () => document.querySelector('[data-tid="closed-caption-renderer-wrapper"], [data-tid="closed-caption-v2-window-wrapper"], [data-tid="closed-captions-renderer"]'),
     captionsOnButton: () => document.querySelector('[data-tid="closed-captions-turn-off-button"]'),
     leaveButton: () => document.querySelector('[id*="hangup"], [data-tid*="hangup"]') ?? control(/^(leave|ออก)(\s*\(|$)/i), // "Leave" or "Leave (Ctrl+Shift+H)", not "Leave team"
-    chatButton: () => control(/^(chat|แชท)$/i),
+    // The full Teams app also has a "Chat" app in its side bar: only look in the call toolbar, around Leave.
+    chatButton() {
+      const own = document.querySelector('#chat-button, [data-tid="chat-button"]');
+      if (own) return own;
+      for (let a = teams.leaveButton()?.parentElement, i = 0; a && i < 8; a = a.parentElement, i++) {
+        const b = [...a.querySelectorAll('button, [role="button"]')].find((x) => /^(chat|แชท)$/i.test(label(x) || x.textContent.trim()));
+        if (b) return b;
+      }
+      return null;
+    },
     chatBox: () => document.querySelector('[data-tid="ckeditor"]'),
     write(box, text) {
       box.focus();
@@ -95,6 +104,8 @@
     if (!entries?.length) return Promise.resolve();
     try { return chrome.runtime.sendMessage({ target: 'offscreen', type: 'debug-log', entries }).catch(() => {}); } catch { return Promise.resolve(); }
   };
+
+  addEventListener('pagehide', () => { log?.state('pagehide'); flushLog(); }); // best effort: the page may be gone first
 
   function startCapture(isPaused = false) {
     counts = zero(); // per recording

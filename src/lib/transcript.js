@@ -23,6 +23,16 @@ export function meetCodeFromUrl(url) {
   return `teams-${code ?? 'meeting'}`;
 }
 
+/**
+ * Whether a tab that moved from meeting code a to b is still the same call.
+ * Teams rewrites its URL mid-call, often to one with no ID: a Teams code without an ID matches any Teams code.
+ */
+export function sameMeeting(a, b) {
+  if (a === b) return true;
+  const vague = (c) => c === 'teams-meeting' || c === 'teams-meet-now';
+  return !!(a?.startsWith('teams-') && b?.startsWith('teams-') && (vague(a) || vague(b)));
+}
+
 /** "Meet abc-defg-hij" or "Teams 439031496660244". */
 export const meetingTitle = (code) => (code.startsWith('teams-') ? `Teams ${code.slice(6)}` : `Meet ${code}`);
 
