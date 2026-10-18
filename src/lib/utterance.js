@@ -30,6 +30,7 @@ export function createUtteranceTracker({ emit, idleMs = 1500, now = Date.now }) 
       for (const b of blocks) {
         seen.add(b.key);
         let u = open.get(b.key);
+        if (!u && emitted.get(b.key) === b.text) continue; // nothing new said, so not a speaker starting
         if (!u) {
           const done = emitted.get(b.key) ?? '';
           u = { speaker: b.speaker, text: done, done, startedAt: now(), last: now() };
