@@ -54,7 +54,8 @@ async function start({ streamId, mic, tabId }) {
 /** Blob URLs for debug/captions.jsonl (everything) and debug/emitted.jsonl (closed utterances), or null when nothing was logged. */
 function dumpDebug() {
   if (!debugLog.length) return null;
-  const jsonl = (entries) => URL.createObjectURL(new Blob(entries.map((e) => `${JSON.stringify(e)}\n`), { type: 'application/x-ndjson' }));
+  // Chrome renames the download to its MIME type's extension, so x-ndjson would save as .ndjson
+  const jsonl = (entries) => URL.createObjectURL(new Blob(entries.map((e) => `${JSON.stringify(e)}\n`), { type: 'application/jsonl' }));
   const out = { captions: jsonl(debugLog), emitted: jsonl(debugLog.filter((e) => e.k === 'emit')) };
   debugLog = [];
   return out;
