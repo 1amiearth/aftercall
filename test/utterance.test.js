@@ -43,6 +43,17 @@ test('another speaker closes the previous speaker at once', () => {
   assert.deepEqual(out.slice(1).map((u) => [u.speaker, u.text]).sort(), [['A', 'there'], ['B', 'hi']]);
 });
 
+test('an earlier bubble still on screen does not split the next speaker into words', () => {
+  const { tr, out, at } = setup();
+  const a = {}, b = {};
+  at(0); tr.update([{ key: a, speaker: 'A', text: 'hello there' }]);
+  at(300); tr.update([{ key: a, speaker: 'A', text: 'hello there' }, { key: b, speaker: 'B', text: 'I' }]);
+  at(400); tr.update([{ key: a, speaker: 'A', text: 'hello there' }, { key: b, speaker: 'B', text: 'I will' }]);
+  at(500); tr.update([{ key: a, speaker: 'A', text: 'hello there' }, { key: b, speaker: 'B', text: 'I will write' }]);
+  at(2500); tr.tick();
+  assert.deepEqual(out.map((u) => [u.speaker, u.text]), [['A', 'hello there'], ['B', 'I will write']]);
+});
+
 test('removed block and flush close without duplicates', () => {
   const { tr, out, at } = setup();
   const a = {};
