@@ -84,8 +84,9 @@
 
   let tracker = null, region = null, observer = null, paused = false, wasInCall = false, missing = 0;
   const read = () => {
-    if (!tracker || paused || !region) return;
+    if (!tracker || !region) return;
     const blocks = SITE.readBlocks(region);
+    if (paused) return tracker.skip(blocks); // said while paused: never transcribed, even if the region is gone at Resume
     counts.reads++;
     counts.parsed = blocks.length;
     log?.snapshot(blocks);
@@ -177,7 +178,7 @@
   chrome.runtime.onMessage.addListener((m, _sender, reply) => {
     if (m.type === 'rec:start') { startCapture(); if (m.chat) postNotice(); }
     if (m.type === 'rec:pause') { tracker?.flush(); paused = true; log?.state('pause'); }
-    if (m.type === 'rec:resume') { if (region) tracker?.resume(SITE.readBlocks(region)); paused = false; log?.state('resume'); }
+    if (m.type === 'rec:resume') { paused = false; log?.state('resume'); }
     if (m.type === 'rec:stop') { stopCapture().then(() => reply({ ok: true })); return true; } // last lines and log out before we reply
     if (m.type === 'status') {
       const r = SITE.captionRegion();

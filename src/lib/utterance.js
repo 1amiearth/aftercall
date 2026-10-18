@@ -56,8 +56,8 @@ export function createUtteranceTracker({ emit, idleMs = 1500, now = Date.now }) 
       for (const [k, u] of open) close(k, u, 'flush');
       open.clear();
     },
-    /** Call on resume: whatever is on screen now was said while paused, so only later growth counts. @param {Block[]} blocks */
-    resume(blocks) {
+    /** These blocks' text was said while not recording (during a pause), so only later growth counts. @param {Block[]} blocks */
+    skip(blocks) {
       for (const b of blocks) emitted.set(b.key, b.text);
     },
   };
