@@ -54,6 +54,17 @@ test('an earlier bubble still on screen does not split the next speaker into wor
   assert.deepEqual(out.map((u) => [u.speaker, u.text]), [['A', 'hello there'], ['B', 'I will write']]);
 });
 
+test('captions on screen at resume were said during the pause: only words after resume come out', () => {
+  const { tr, out, at } = setup();
+  const a = {}, b = {};
+  at(0); tr.update([{ key: a, speaker: 'A', text: 'before' }]);
+  tr.flush(); // pause
+  at(1000); tr.resume([{ key: a, speaker: 'A', text: 'before and during' }, { key: b, speaker: 'B', text: 'during' }]);
+  at(1200); tr.update([{ key: a, speaker: 'A', text: 'before and during' }, { key: b, speaker: 'B', text: 'during and after' }]);
+  at(3000); tr.tick();
+  assert.deepEqual(out.map((u) => [u.speaker, u.text]), [['A', 'before'], ['B', 'and after']]);
+});
+
 test('removed block and flush close without duplicates', () => {
   const { tr, out, at } = setup();
   const a = {};
