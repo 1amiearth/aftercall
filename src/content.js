@@ -177,7 +177,7 @@
   chrome.runtime.onMessage.addListener((m, _sender, reply) => {
     if (m.type === 'rec:start') { startCapture(); if (m.chat) postNotice(); }
     if (m.type === 'rec:pause') { tracker?.flush(); paused = true; log?.state('pause'); }
-    if (m.type === 'rec:resume') { paused = false; log?.state('resume'); }
+    if (m.type === 'rec:resume') { if (region) tracker?.resume(SITE.readBlocks(region)); paused = false; log?.state('resume'); }
     if (m.type === 'rec:stop') { stopCapture().then(() => reply({ ok: true })); return true; } // last lines and log out before we reply
     if (m.type === 'status') {
       const r = SITE.captionRegion();
